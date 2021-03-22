@@ -6,14 +6,15 @@
     <description>Recent content in Posts on Josh Thiele</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Sat, 06 Mar 2021 21:13:14 -0500</lastBuildDate><atom:link href="http://jthiele5.github.io/post/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Wed, 17 Mar 2021 00:00:00 +0000</lastBuildDate><atom:link href="http://jthiele5.github.io/post/index.xml" rel="self" type="application/rss+xml" />
     <item>
-      <title>2021 B1G Tournament Prediction Using Machine Learning</title>
-      <link>http://jthiele5.github.io/2021/03/06/2021-b1g-tournament-prediction-using-machine-learning/</link>
-      <pubDate>Sat, 06 Mar 2021 21:13:14 -0500</pubDate>
+      <title>Predicting March Madness with Machine Learning</title>
+      <link>http://jthiele5.github.io/2021/03/17/predicting-march-madness-with-machine-learning/</link>
+      <pubDate>Wed, 17 Mar 2021 00:00:00 +0000</pubDate>
       
-      <guid>http://jthiele5.github.io/2021/03/06/2021-b1g-tournament-prediction-using-machine-learning/</guid>
-      <description></description>
+      <guid>http://jthiele5.github.io/2021/03/17/predicting-march-madness-with-machine-learning/</guid>
+      <description>Using logistic regression and random forests to predict the 2021 College Basketball ChampionI need to clean this up, limit the code and write some more
+## -- Attaching packages --------------------------------------- tidyverse 1.3.0 --## v ggplot2 3.3.3 v purrr 0.3.4## v tibble 3.1.0 v dplyr 1.0.5## v tidyr 1.1.3 v stringr 1.4.0## v readr 1.4.0 v forcats 0.5.1## Warning: package &amp;#39;ggplot2&amp;#39; was built under R version 4.</description>
     </item>
     
   </channel>
