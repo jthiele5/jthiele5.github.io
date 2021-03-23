@@ -13,8 +13,7 @@
       <pubDate>Wed, 17 Mar 2021 00:00:00 +0000</pubDate>
       
       <guid>http://jthiele5.github.io/2021/03/17/predicting-march-madness-with-machine-learning/</guid>
-      <description>Using logistic regression and random forests to predict the 2021 College Basketball ChampionI need to clean this up, limit the code and write some more
-## -- Attaching packages --------------------------------------- tidyverse 1.3.0 --## v ggplot2 3.3.3 v purrr 0.3.4## v tibble 3.1.0 v dplyr 1.0.5## v tidyr 1.1.3 v stringr 1.4.0## v readr 1.4.0 v forcats 0.5.1## Warning: package &amp;#39;ggplot2&amp;#39; was built under R version 4.</description>
+      <description>BackgroundWe all look to win that lucrative $1 million dollars for that perfect bracket, but we resort to methods of picking the color mascot, flipping a coin, or now the new favorite - letting the site randomly finish your bracket for you. Based on probability, you have a 1 in over 9 quintillion - that’s 18 zeros. With a little bit of basketball knowledge and history of the tournament, you can probably bring down those odds to 1 in 100 billion, so your dreams of that million dollars should stay dreams.</description>
     </item>
     
   </channel>

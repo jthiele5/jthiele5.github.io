@@ -62,7 +62,7 @@
 
   <article class="article">
     
-    <span class="article-duration">26 min read</span>
+    <span class="article-duration">12 min read</span>
     
 
     <h1 class="article-title">Predicting March Madness with Machine Learning</h1>
@@ -76,46 +76,14 @@
 <script src="http://jthiele5.github.io/2021/03/17/predicting-march-madness-with-machine-learning/index_files/header-attrs/header-attrs.js"></script>
 
 
-<div id="using-logistic-regression-and-random-forests-to-predict-the-2021-college-basketball-champion" class="section level2">
-<h2>Using logistic regression and random forests to predict the 2021 College Basketball Champion</h2>
-<p>I need to clean this up, limit the code and write some more</p>
-<pre><code>## -- Attaching packages --------------------------------------- tidyverse 1.3.0 --</code></pre>
-<pre><code>## v ggplot2 3.3.3     v purrr   0.3.4
-## v tibble  3.1.0     v dplyr   1.0.5
-## v tidyr   1.1.3     v stringr 1.4.0
-## v readr   1.4.0     v forcats 0.5.1</code></pre>
-<pre><code>## Warning: package &#39;ggplot2&#39; was built under R version 4.0.4</code></pre>
-<pre><code>## Warning: package &#39;tibble&#39; was built under R version 4.0.4</code></pre>
-<pre><code>## Warning: package &#39;tidyr&#39; was built under R version 4.0.4</code></pre>
-<pre><code>## Warning: package &#39;dplyr&#39; was built under R version 4.0.4</code></pre>
-<pre><code>## Warning: package &#39;forcats&#39; was built under R version 4.0.4</code></pre>
-<pre><code>## -- Conflicts ------------------------------------------ tidyverse_conflicts() --
-## x dplyr::filter() masks stats::filter()
-## x dplyr::lag()    masks stats::lag()</code></pre>
-<pre><code>## -- Attaching packages -------------------------------------- tidymodels 0.1.2 --</code></pre>
-<pre><code>## v broom     0.7.5      v recipes   0.1.15
-## v dials     0.0.9      v rsample   0.0.9 
-## v infer     0.5.4      v tune      0.1.3 
-## v modeldata 0.1.0      v workflows 0.2.2 
-## v parsnip   0.1.5      v yardstick 0.0.7</code></pre>
-<pre><code>## Warning: package &#39;broom&#39; was built under R version 4.0.4</code></pre>
-<pre><code>## Warning: package &#39;rsample&#39; was built under R version 4.0.4</code></pre>
-<pre><code>## Warning: package &#39;tune&#39; was built under R version 4.0.4</code></pre>
-<pre><code>## Warning: package &#39;workflows&#39; was built under R version 4.0.4</code></pre>
-<pre><code>## -- Conflicts ----------------------------------------- tidymodels_conflicts() --
-## x scales::discard() masks purrr::discard()
-## x dplyr::filter()   masks stats::filter()
-## x recipes::fixed()  masks stringr::fixed()
-## x dplyr::lag()      masks stats::lag()
-## x yardstick::spec() masks readr::spec()
-## x recipes::step()   masks stats::step()</code></pre>
-<pre><code>## Warning: package &#39;zoo&#39; was built under R version 4.0.4</code></pre>
-<pre><code>## 
-## Attaching package: &#39;zoo&#39;</code></pre>
-<pre><code>## The following objects are masked from &#39;package:base&#39;:
-## 
-##     as.Date, as.Date.numeric</code></pre>
-<p>Loading the data and preparing it for logistic regression</p>
+<div id="background" class="section level2">
+<h2>Background</h2>
+<p>We all look to win that lucrative $1 million dollars for that perfect bracket, but we resort to methods of picking the color mascot, flipping a coin, or now the new favorite - letting the site randomly finish your bracket for you. Based on probability, you have a 1 in over 9 quintillion - that’s 18 zeros. With a little bit of basketball knowledge and history of the tournament, you can probably bring down those odds to 1 in 100 billion, so your dreams of that million dollars should stay dreams.</p>
+<p>Now me being a math nerd and very optimistic of my own abilities (even though 75% of college basketball I watched this year was Nebraska), I utilized a new method to create my brackets this year. I’ve attempted to create the best model R based on a few metrics to predict this year’s champion. I’ll give a little breakdown of my thinking and how I expect this year to go.</p>
+</div>
+<div id="features-of-the-model" class="section level2">
+<h2>Features of the Model</h2>
+<p>The goal of the model is to correctly predict the winner of games (the data is from 2013 through the conference championships of 2021). The higher the accuracy of the model, the better results. The issue this year is teams played fewer non-conference games, meaning it’s more difficult to truly tell how good each conference is, and therefore, how good each team is. Therefore, I included a basic Win Quality metric to hopefully compensate for that lack of intraconference play.</p>
 <pre class="r"><code>games &lt;- read_csv(&quot;data/cbblogs1521.csv&quot;) %&gt;% mutate(
   Possessions = .5*(TeamFGA - TeamOffRebounds + TeamTurnovers + (.475 * TeamFTA)) + .5*(OpponentFGA - OpponentOffRebounds + OpponentTurnovers + (.475 * OpponentFTA)),
   OffensiveRating = (TeamScore/Possessions)*100, 
@@ -157,20 +125,186 @@
 ##   Team = col_character()
 ## )
 ## i Use `spec()` for the full column specifications.</code></pre>
-<pre class="r"><code>#conferences &lt;- games %&gt;%
-  #select(Team,Conference,Season) %&gt;%
-  #distinct()
-  
-#colnames(conferences) &lt;- c(&quot;Opponent&quot;,&quot;OpponentConference&quot;,&quot;Season&quot;)
+<p>The only other three metrics are each team’s respective pace, offensive rating, and defensive rating. When these three stats are known - which is only possible after the game, are able to correctly predict results and score nearly 100% of the time. The fun part is trying to predict those stats before the games begin, and as you can see below, that’s definitely the hard part. This model only gets about 70% of the games right. In other words, basketball is a very hard game to predict.</p>
+<pre class="r"><code>metrics(testpredict, Outcome, .pred_class)</code></pre>
+<pre><code>## # A tibble: 2 x 3
+##   .metric  .estimator .estimate
+##   &lt;chr&gt;    &lt;chr&gt;          &lt;dbl&gt;
+## 1 accuracy binary         0.692
+## 2 kap      binary         0.384</code></pre>
+<p>The reasoning behind the rolling mean is based solely on accuracy. A rolling mean did better than a cumulative mean for k number of games, where in this case, that k was 10. I decided upon 10 because the model, when applied to March Madness, was too unstable when k was less than 10, despite including the Win Quality variable. FOr example, when k was anywhere between 2 to 5, the model would predict a lot of upsets from low seeded, non-Power5 teams, which typically wouldn’t occur.</p>
+<p>Additionally, I limited the Win Quality variable to the last 15 games, looking to only include conference play and when most teams were settled into the season - hopefully looking to remove most COVID breaks and/or teams had developed their identity. It has been a weird year for college hoops, and the results below definitely show it!</p>
+<p>***Final disclaimer, the model doesn’t adjust for teams with recently diminished rosters - I’m looking at you Michigan, Villanova, and Kansas - but will slightly realize these changes through their worst performances from the last few games.</p>
+</div>
+<div id="bracket" class="section level2">
+<h2>Bracket</h2>
+<p>To save you some time, we’re going to hop right into the Elite 8 and summarize how the teams got there. For the West, we see Gonzaga stays undefeated after victories over Norfolk State, Missouri, and Virginia. Kansas defeats Eastern Washington, USC, and Iowa on it’s way to Gonzaga, unfortunately losing to the juggernaut of Gonzaga. The biggest upset by the model for this region, predicting Creighton to lose to UCSB.</p>
+<pre class="r"><code>west8 &lt;- tibble(
+  Team=&quot;Gonzaga&quot;,
+  Opponent=&quot;Kansas&quot;,
+  Date = as.Date(&quot;2021-03-19&quot;)
+) 
 
-#modeldata &lt;- left_join(games, conferences) %&gt;%
-  #filter(Conference == OpponentConference)</code></pre>
-<p>Selecting the needed metrics for prediction</p>
-<p>Creating opponentgames to combined team and opponent stats</p>
-<pre class="r"><code>opponentgames &lt;- selectedgames %&gt;% select(-Opponent) %&gt;% rename(Opponent = Team, OpponentScore = TeamScore, OpponentRollingPace = RollingPace, OpponentRollingMeanOffRating = RollingMeanOffRating, OpponentRollingMeanDefRating = RollingMeanDefRating, OpponentSRS = TeamSRS, OpponentCumulativeWinQuality = CumulativeWinQuality)</code></pre>
-<p>Combining stats.</p>
-<pre class="r"><code>bothsides &lt;- selectedgames %&gt;% left_join(opponentgames, by=c(&quot;Opponent&quot;, &quot;Date&quot;, &quot;Season&quot;)) %&gt;% na.omit() %&gt;% select(-Outcome.y) %&gt;% rename(Outcome = Outcome.x)</code></pre>
-<pre class="r"><code>Gonzaga &lt;- bothsides %&gt;% filter(Team == &quot;Gonzaga&quot;, Season == &quot;2020-2021&quot;) %&gt;% group_by(Team, Season) %&gt;% mutate(
+westgames8 &lt;- selectedgames %&gt;% group_by(Team) %&gt;% filter(Date == max(Date), Season == &quot;2020-2021&quot;) %&gt;% select(-Date, -Opponent, -Outcome) %&gt;% right_join(west8)</code></pre>
+<pre><code>## Joining, by = &quot;Team&quot;</code></pre>
+<pre class="r"><code>westgames8 &lt;- opponentgames %&gt;% group_by(Opponent) %&gt;% filter(Date == max(Date)) %&gt;% ungroup()  %&gt;% select(-Season, -Date, -Outcome) %&gt;% right_join(westgames8, by=c(&quot;Opponent&quot;)) %&gt;% select(Team, everything())
+
+westregional8 &lt;- log_fit %&gt;% predict(new_data = westgames8) %&gt;%
+  bind_cols(westgames8) 
+
+log_fit %&gt;% predict(new_data = westregional8, type=&quot;prob&quot;) %&gt;%
+  bind_cols(westregional8)</code></pre>
+<pre><code>## # A tibble: 1 x 19
+##   .pred_L .pred_W .pred_class Team    Opponent OpponentScore OpponentRollingPace
+##     &lt;dbl&gt;   &lt;dbl&gt; &lt;fct&gt;       &lt;chr&gt;   &lt;chr&gt;            &lt;dbl&gt;               &lt;dbl&gt;
+## 1   0.410   0.590 W           Gonzaga Kansas              69                75.4
+## # ... with 12 more variables: OpponentSRS &lt;dbl&gt;,
+## #   OpponentRollingMeanOffRating &lt;dbl&gt;, OpponentRollingMeanDefRating &lt;dbl&gt;,
+## #   OpponentCumulativeWinQuality &lt;dbl&gt;, Season &lt;chr&gt;, TeamScore &lt;dbl&gt;,
+## #   RollingPace &lt;dbl&gt;, TeamSRS &lt;dbl&gt;, RollingMeanOffRating &lt;dbl&gt;,
+## #   RollingMeanDefRating &lt;dbl&gt;, CumulativeWinQuality &lt;dbl&gt;, Date &lt;date&gt;</code></pre>
+<p>We move to the East where we see the No. 1 Michigan Wolverines face and defeat the No. 2 Alabama Crimson Tide. Alabama beats Iona, Maryland, and Texas along the way but can’t quite get past the Wolverines, who beats Mount Saint Mary’s - winner of the playin game - LSU and Colorado. Maryland beating UConn is the biggest upset predicted for the East region.</p>
+<pre class="r"><code>east8 &lt;- tibble(
+  Team=&quot;Michigan&quot;,
+  Opponent=&quot;Alabama&quot;,
+  Date = as.Date(&quot;2021-03-19&quot;)
+)
+
+eastgames8 &lt;- selectedgames %&gt;% group_by(Team) %&gt;% filter(Date == max(Date), Season == &quot;2020-2021&quot;) %&gt;% select(-Date, -Opponent, -Outcome) %&gt;% right_join(east8)</code></pre>
+<pre><code>## Joining, by = &quot;Team&quot;</code></pre>
+<pre class="r"><code>eastgames8 &lt;- opponentgames %&gt;% group_by(Opponent) %&gt;% filter(Date == max(Date)) %&gt;% ungroup()  %&gt;% select(-Season, -Date, -Outcome) %&gt;% right_join(eastgames8, by=c(&quot;Opponent&quot;)) %&gt;% select(Team, everything())
+
+eastregional8 &lt;- log_fit %&gt;% predict(new_data = eastgames8) %&gt;%
+  bind_cols(eastgames8) 
+
+log_fit %&gt;% predict(new_data = eastregional8, type=&quot;prob&quot;) %&gt;%
+  bind_cols(eastregional8)</code></pre>
+<pre><code>## # A tibble: 1 x 19
+##   .pred_L .pred_W .pred_class Team     Opponent OpponentScore OpponentRollingPa~
+##     &lt;dbl&gt;   &lt;dbl&gt; &lt;fct&gt;       &lt;chr&gt;    &lt;chr&gt;            &lt;dbl&gt;              &lt;dbl&gt;
+## 1   0.488   0.512 W           Michigan Alabama             80               75.0
+## # ... with 12 more variables: OpponentSRS &lt;dbl&gt;,
+## #   OpponentRollingMeanOffRating &lt;dbl&gt;, OpponentRollingMeanDefRating &lt;dbl&gt;,
+## #   OpponentCumulativeWinQuality &lt;dbl&gt;, Season &lt;chr&gt;, TeamScore &lt;dbl&gt;,
+## #   RollingPace &lt;dbl&gt;, TeamSRS &lt;dbl&gt;, RollingMeanOffRating &lt;dbl&gt;,
+## #   RollingMeanDefRating &lt;dbl&gt;, CumulativeWinQuality &lt;dbl&gt;, Date &lt;date&gt;</code></pre>
+<p>Moving to the South, the model breaks it’s nearly cookie cutter mold. We see Baylor roll through Wisconsin and Purdue on its way to a matchup with Colgate. The anticipated Cinderalla - the gambling action for the first round will also agree - for this year is Colgate, beating Arkansas, Texas Tech, and Ohio State to end their run to a lose against Baylor. Virginia Tech beats Florida first round, but the story out South are the Raiders from New York.</p>
+<pre class="r"><code>south8 &lt;- tibble(
+  Team=&quot;Baylor&quot;,
+  Opponent=&quot;Colgate&quot;,
+  Date = as.Date(&quot;2021-03-19&quot;)
+)
+
+southgames8 &lt;- selectedgames %&gt;% group_by(Team) %&gt;% filter(Date == max(Date), Season == &quot;2020-2021&quot;) %&gt;% select(-Date, -Opponent, -Outcome) %&gt;% right_join(south8)</code></pre>
+<pre><code>## Joining, by = &quot;Team&quot;</code></pre>
+<pre class="r"><code>southgames8 &lt;- opponentgames %&gt;% group_by(Opponent) %&gt;% filter(Date == max(Date)) %&gt;% ungroup()  %&gt;% select(-Season, -Date, -Outcome) %&gt;% right_join(southgames8, by=c(&quot;Opponent&quot;)) %&gt;% select(Team, everything())
+
+southregional8 &lt;- log_fit %&gt;% predict(new_data = southgames8) %&gt;%
+  bind_cols(southgames8) 
+
+log_fit %&gt;% predict(new_data = southregional8, type=&quot;prob&quot;) %&gt;%
+  bind_cols(southregional8)</code></pre>
+<pre><code>## # A tibble: 1 x 19
+##   .pred_L .pred_W .pred_class Team   Opponent OpponentScore OpponentRollingPace
+##     &lt;dbl&gt;   &lt;dbl&gt; &lt;fct&gt;       &lt;chr&gt;  &lt;chr&gt;            &lt;dbl&gt;               &lt;dbl&gt;
+## 1   0.391   0.609 W           Baylor Colgate             85                73.2
+## # ... with 12 more variables: OpponentSRS &lt;dbl&gt;,
+## #   OpponentRollingMeanOffRating &lt;dbl&gt;, OpponentRollingMeanDefRating &lt;dbl&gt;,
+## #   OpponentCumulativeWinQuality &lt;dbl&gt;, Season &lt;chr&gt;, TeamScore &lt;dbl&gt;,
+## #   RollingPace &lt;dbl&gt;, TeamSRS &lt;dbl&gt;, RollingMeanOffRating &lt;dbl&gt;,
+## #   RollingMeanDefRating &lt;dbl&gt;, CumulativeWinQuality &lt;dbl&gt;, Date &lt;date&gt;</code></pre>
+<p>In the Midwest, we return to cookie cutter fashion with an Elite 8 of No. 1 an No. 2 - and you guessed it, Illinois advances to the Final Four. Houston routs Cleveland State, Clemson, and San Diego State on their run but Illinois comes in with a full head of steam after defeating Drexel, Loyola Chicago, and Oklahoma State. The surprise here, San Diego State makes it to the Sweet 16.</p>
+<pre class="r"><code>midwest8 &lt;- tibble(
+  Team=&quot;Houston&quot;,
+  Opponent=&quot;Illinois&quot;,
+  Date = as.Date(&quot;2021-03-19&quot;)
+)
+
+midwestgames8 &lt;- selectedgames %&gt;% group_by(Team) %&gt;% filter(Date == max(Date), Season == &quot;2020-2021&quot;) %&gt;% select(-Date, -Opponent, -Outcome) %&gt;% right_join(midwest8)</code></pre>
+<pre><code>## Joining, by = &quot;Team&quot;</code></pre>
+<pre class="r"><code>midwestgames8 &lt;- opponentgames %&gt;% group_by(Opponent) %&gt;% filter(Date == max(Date)) %&gt;% ungroup()  %&gt;% select(-Season, -Date, -Outcome) %&gt;% right_join(midwestgames8, by=c(&quot;Opponent&quot;)) %&gt;% select(Team, everything())
+
+midwestregional8 &lt;- log_fit %&gt;% predict(new_data = midwestgames8) %&gt;%
+  bind_cols(midwestgames8) 
+
+log_fit %&gt;% predict(new_data = midwestregional8, type=&quot;prob&quot;) %&gt;%
+  bind_cols(midwestregional8)</code></pre>
+<pre><code>## # A tibble: 1 x 19
+##   .pred_L .pred_W .pred_class Team    Opponent OpponentScore OpponentRollingPace
+##     &lt;dbl&gt;   &lt;dbl&gt; &lt;fct&gt;       &lt;chr&gt;   &lt;chr&gt;            &lt;dbl&gt;               &lt;dbl&gt;
+## 1   0.735   0.265 L           Houston Illinois            91                73.3
+## # ... with 12 more variables: OpponentSRS &lt;dbl&gt;,
+## #   OpponentRollingMeanOffRating &lt;dbl&gt;, OpponentRollingMeanDefRating &lt;dbl&gt;,
+## #   OpponentCumulativeWinQuality &lt;dbl&gt;, Season &lt;chr&gt;, TeamScore &lt;dbl&gt;,
+## #   RollingPace &lt;dbl&gt;, TeamSRS &lt;dbl&gt;, RollingMeanOffRating &lt;dbl&gt;,
+## #   RollingMeanDefRating &lt;dbl&gt;, CumulativeWinQuality &lt;dbl&gt;, Date &lt;date&gt;</code></pre>
+</div>
+<div id="the-final-four" class="section level2">
+<h2>The Final Four</h2>
+<p>The model sure likes the favorites. Despite no Livers, Michigan still wins their region but will come up short to Gonzaga. But don’t you worry you B1G fans, Illinois has got your back. The model predicts the Illini to win handily over the Baylor Bears, giving them a shot at not only being the best in their conference but also ruining Gonzaga’s perfect season.</p>
+<pre class="r"><code>finalfour &lt;- tibble(
+  Team=&quot;Baylor&quot;,
+  Opponent=&quot;Illinois&quot;,
+  Date = as.Date(&quot;2021-03-19&quot;)
+) %&gt;% add_row(
+  Team=&quot;Gonzaga&quot;,
+  Opponent=&quot;Michigan&quot;,
+  Date = as.Date(&quot;2021-03-19&quot;)
+)
+
+finalfourgames &lt;- selectedgames %&gt;% group_by(Team) %&gt;% filter(Date == max(Date), Season == &quot;2020-2021&quot;) %&gt;% select(-Date, -Opponent, -Outcome) %&gt;% right_join(finalfour)</code></pre>
+<pre><code>## Joining, by = &quot;Team&quot;</code></pre>
+<pre class="r"><code>finalfourgames &lt;- opponentgames %&gt;% group_by(Opponent) %&gt;% filter(Date == max(Date)) %&gt;% ungroup()  %&gt;% select(-Season, -Date, -Outcome) %&gt;% right_join(finalfourgames, by=c(&quot;Opponent&quot;)) %&gt;% select(Team, everything())
+
+finalfourresults &lt;- log_fit %&gt;% predict(new_data = finalfourgames) %&gt;%
+  bind_cols(finalfourgames) 
+
+log_fit %&gt;% predict(new_data = finalfourresults, type=&quot;prob&quot;) %&gt;%
+  bind_cols(finalfourresults)</code></pre>
+<pre><code>## # A tibble: 2 x 19
+##   .pred_L .pred_W .pred_class Team    Opponent OpponentScore OpponentRollingPace
+##     &lt;dbl&gt;   &lt;dbl&gt; &lt;fct&gt;       &lt;chr&gt;   &lt;chr&gt;            &lt;dbl&gt;               &lt;dbl&gt;
+## 1   0.692   0.308 L           Baylor  Illinois            91                73.3
+## 2   0.410   0.590 W           Gonzaga Michigan            67                72.8
+## # ... with 12 more variables: OpponentSRS &lt;dbl&gt;,
+## #   OpponentRollingMeanOffRating &lt;dbl&gt;, OpponentRollingMeanDefRating &lt;dbl&gt;,
+## #   OpponentCumulativeWinQuality &lt;dbl&gt;, Season &lt;chr&gt;, TeamScore &lt;dbl&gt;,
+## #   RollingPace &lt;dbl&gt;, TeamSRS &lt;dbl&gt;, RollingMeanOffRating &lt;dbl&gt;,
+## #   RollingMeanDefRating &lt;dbl&gt;, CumulativeWinQuality &lt;dbl&gt;, Date &lt;date&gt;</code></pre>
+</div>
+<div id="championship" class="section level2">
+<h2>Championship</h2>
+<p>Two Preseason Top 10 teams reach the finals, and Gonzaga looks to end with a historical season. They’re looking to join 7 other undefeated national champions and to be the first since 1976.</p>
+<pre class="r"><code>championship &lt;- tibble(
+  Team=&quot;Illinois&quot;,
+  Opponent=&quot;Gonzaga&quot;,
+  Date = as.Date(&quot;2021-03-19&quot;)
+)
+
+championshipgames &lt;- selectedgames %&gt;% group_by(Team) %&gt;% filter(Date == max(Date), Season == &quot;2020-2021&quot;) %&gt;% select(-Date, -Opponent, -Outcome) %&gt;% right_join(championship)</code></pre>
+<pre><code>## Joining, by = &quot;Team&quot;</code></pre>
+<pre class="r"><code>championshipgames &lt;- opponentgames %&gt;% group_by(Opponent) %&gt;% filter(Date == max(Date)) %&gt;% ungroup()  %&gt;% select(-Season, -Date, -Outcome) %&gt;% right_join(championshipgames, by=c(&quot;Opponent&quot;)) %&gt;% select(Team, everything())
+
+championshipresults &lt;- log_fit %&gt;% predict(new_data = championshipgames) %&gt;%
+  bind_cols(championshipgames) 
+
+log_fit %&gt;% predict(new_data = championshipresults, type=&quot;prob&quot;) %&gt;%
+  bind_cols(championshipresults)</code></pre>
+<pre><code>## # A tibble: 1 x 19
+##   .pred_L .pred_W .pred_class Team     Opponent OpponentScore OpponentRollingPa~
+##     &lt;dbl&gt;   &lt;dbl&gt; &lt;fct&gt;       &lt;chr&gt;    &lt;chr&gt;            &lt;dbl&gt;              &lt;dbl&gt;
+## 1   0.571   0.429 L           Illinois Gonzaga             88               83.8
+## # ... with 12 more variables: OpponentSRS &lt;dbl&gt;,
+## #   OpponentRollingMeanOffRating &lt;dbl&gt;, OpponentRollingMeanDefRating &lt;dbl&gt;,
+## #   OpponentCumulativeWinQuality &lt;dbl&gt;, Season &lt;chr&gt;, TeamScore &lt;dbl&gt;,
+## #   RollingPace &lt;dbl&gt;, TeamSRS &lt;dbl&gt;, RollingMeanOffRating &lt;dbl&gt;,
+## #   RollingMeanDefRating &lt;dbl&gt;, CumulativeWinQuality &lt;dbl&gt;, Date &lt;date&gt;</code></pre>
+<p>Once again, the model likes to pick a favorite, this time in historic nature. It’s been hard to bet against the Bulldogs this year, and the numbers even show it. I’ll be honest, the bracket paints a pretty picture for most high seeds, but as we’ve all seen before, this bracket is likely to get busted. With all the struggles and craziness of the 2020-2021 season already, I doubt this year’s bracket will go as expected.</p>
+</div>
+<div id="extra-bracket-tiebreaker" class="section level2">
+<h2>Extra: Bracket Tiebreaker</h2>
+<p>In the event that this bracket miraculously does well, I spent a little time using some data to come to a championship score prediction. I simply looked at the pace and ratings of both Gonzaga and Illinois and like everyone else, took an educated guess (this time using some data to back it up).</p>
+<pre class="r"><code>Gonzaga &lt;- bothsides2 %&gt;% filter(Team == &quot;Gonzaga&quot;, Season == &quot;2020-2021&quot;) %&gt;% group_by(Team, Season) %&gt;% mutate(
     CumMeanTeamScore = cummean(TeamScore),
     CumMeanOppScore = cummean(OpponentScore)
   ) %&gt;% ungroup() %&gt;%
@@ -191,7 +325,7 @@ Gonzaga</code></pre>
 ##  9 Gonzaga             96              67.4        83.8                 104.
 ## 10 Gonzaga             95              67.6        83.8                 104.
 ## # ... with 1 more variable: RollingMeanDefRating &lt;dbl&gt;</code></pre>
-<pre class="r"><code>Illinois &lt;- bothsides %&gt;% filter(Team == &quot;Illinois&quot;, Season == &quot;2020-2021&quot;) %&gt;% group_by(Team, Season) %&gt;% mutate(
+<pre class="r"><code>Illinois &lt;- bothsides2 %&gt;% filter(Team == &quot;Illinois&quot;, Season == &quot;2020-2021&quot;) %&gt;% group_by(Team, Season) %&gt;% mutate(
     CumMeanTeamScore = cummean(TeamScore),
     CumMeanOppScore = cummean(OpponentScore)
   ) %&gt;% ungroup() %&gt;%
@@ -216,865 +350,7 @@ Illinois</code></pre>
 ## 13 Illinois             79              68.2        73.3                 105.
 ## 14 Illinois             79.9            69.6        73.3                 105.
 ## # ... with 1 more variable: RollingMeanDefRating &lt;dbl&gt;</code></pre>
-<pre class="r"><code>bothsides &lt;- bothsides %&gt;% select(-TeamScore, -OpponentScore)</code></pre>
-<p>Splitting games.</p>
-<pre class="r"><code>log_split &lt;- initial_split(bothsides, prop = .8)
-log_train &lt;- training(log_split)
-log_test &lt;- testing(log_split)</code></pre>
-<p>Creating regression recipe.</p>
-<pre class="r"><code>log_recipe &lt;- 
-  recipe(Outcome ~ ., data = log_train) %&gt;% 
-  update_role(Team, Opponent, Date, Season, new_role = &quot;ID&quot;) %&gt;%
-  step_normalize(all_predictors())
-
-summary(log_recipe)</code></pre>
-<pre><code>## # A tibble: 15 x 4
-##    variable                     type    role      source  
-##    &lt;chr&gt;                        &lt;chr&gt;   &lt;chr&gt;     &lt;chr&gt;   
-##  1 Season                       nominal ID        original
-##  2 Team                         nominal ID        original
-##  3 Date                         date    ID        original
-##  4 Opponent                     nominal ID        original
-##  5 RollingPace                  numeric predictor original
-##  6 TeamSRS                      numeric predictor original
-##  7 RollingMeanOffRating         numeric predictor original
-##  8 RollingMeanDefRating         numeric predictor original
-##  9 CumulativeWinQuality         numeric predictor original
-## 10 OpponentRollingPace          numeric predictor original
-## 11 OpponentSRS                  numeric predictor original
-## 12 OpponentRollingMeanOffRating numeric predictor original
-## 13 OpponentRollingMeanDefRating numeric predictor original
-## 14 OpponentCumulativeWinQuality numeric predictor original
-## 15 Outcome                      nominal outcome   original</code></pre>
-<p>Creating regression model.</p>
-<pre class="r"><code>log_mod &lt;- 
-  rand_forest() %&gt;% 
-  set_engine(&quot;ranger&quot;) %&gt;%
-  set_mode(&quot;classification&quot;)</code></pre>
-<p>Creating workflow.</p>
-<pre class="r"><code>log_workflow &lt;- 
-  workflow() %&gt;% 
-  add_model(log_mod) %&gt;% 
-  add_recipe(log_recipe)</code></pre>
-<p>Fitting our model (this will take a few minutes).</p>
-<pre class="r"><code>log_fit &lt;- 
-  log_workflow %&gt;% 
-  fit(data = log_train)</code></pre>
-<p>Combining prediction result to training data.</p>
-<pre class="r"><code>trainpredict &lt;- log_fit %&gt;% predict(new_data = log_train) %&gt;%
-  bind_cols(log_train)
-
-trainpredict</code></pre>
-<pre><code>## # A tibble: 20,086 x 16
-##    .pred_class Season  Team    Date       Opponent   Outcome RollingPace TeamSRS
-##    &lt;fct&gt;       &lt;chr&gt;   &lt;chr&gt;   &lt;date&gt;     &lt;chr&gt;      &lt;fct&gt;         &lt;dbl&gt;   &lt;dbl&gt;
-##  1 L           2014-2~ Abilen~ 2015-01-20 McNeese S~ L              67.9   -17.2
-##  2 L           2014-2~ Abilen~ 2015-01-24 Incarnate~ L              67.4   -17.2
-##  3 L           2014-2~ Abilen~ 2015-01-26 Sam Houst~ L              66.4   -17.2
-##  4 L           2014-2~ Abilen~ 2015-01-31 Lamar      L              65.6   -17.2
-##  5 L           2014-2~ Abilen~ 2015-02-02 Houston B~ L              65.2   -17.2
-##  6 L           2014-2~ Abilen~ 2015-02-07 Southeast~ L              64.2   -17.2
-##  7 L           2014-2~ Abilen~ 2015-02-09 Lamar      L              64.0   -17.2
-##  8 L           2014-2~ Abilen~ 2015-02-16 Sam Houst~ L              64.5   -17.2
-##  9 L           2014-2~ Abilen~ 2015-02-21 Southeast~ L              63.0   -17.2
-## 10 L           2014-2~ Abilen~ 2015-02-24 Texas A&amp;M~ L              79.2   -17.2
-## # ... with 20,076 more rows, and 8 more variables: RollingMeanOffRating &lt;dbl&gt;,
-## #   RollingMeanDefRating &lt;dbl&gt;, CumulativeWinQuality &lt;dbl&gt;,
-## #   OpponentRollingPace &lt;dbl&gt;, OpponentSRS &lt;dbl&gt;,
-## #   OpponentRollingMeanOffRating &lt;dbl&gt;, OpponentRollingMeanDefRating &lt;dbl&gt;,
-## #   OpponentCumulativeWinQuality &lt;dbl&gt;</code></pre>
-<p>Combining prediction probabilities to training data.</p>
-<pre class="r"><code>trainpredict &lt;- log_fit %&gt;% predict(new_data = log_train, type=&quot;prob&quot;) %&gt;%
-  bind_cols(trainpredict)
-
-trainpredict</code></pre>
-<pre><code>## # A tibble: 20,086 x 18
-##    .pred_L .pred_W .pred_class Season  Team      Date       Opponent     Outcome
-##      &lt;dbl&gt;   &lt;dbl&gt; &lt;fct&gt;       &lt;chr&gt;   &lt;chr&gt;     &lt;date&gt;     &lt;chr&gt;        &lt;fct&gt;  
-##  1   0.752  0.248  L           2014-2~ Abilene ~ 2015-01-20 McNeese Sta~ L      
-##  2   0.914  0.0858 L           2014-2~ Abilene ~ 2015-01-24 Incarnate W~ L      
-##  3   0.987  0.0131 L           2014-2~ Abilene ~ 2015-01-26 Sam Houston~ L      
-##  4   0.894  0.106  L           2014-2~ Abilene ~ 2015-01-31 Lamar        L      
-##  5   0.859  0.141  L           2014-2~ Abilene ~ 2015-02-02 Houston Bap~ L      
-##  6   0.878  0.122  L           2014-2~ Abilene ~ 2015-02-07 Southeaster~ L      
-##  7   0.864  0.136  L           2014-2~ Abilene ~ 2015-02-09 Lamar        L      
-##  8   0.983  0.0174 L           2014-2~ Abilene ~ 2015-02-16 Sam Houston~ L      
-##  9   0.880  0.120  L           2014-2~ Abilene ~ 2015-02-21 Southeaster~ L      
-## 10   0.850  0.150  L           2014-2~ Abilene ~ 2015-02-24 Texas A&amp;M-C~ L      
-## # ... with 20,076 more rows, and 10 more variables: RollingPace &lt;dbl&gt;,
-## #   TeamSRS &lt;dbl&gt;, RollingMeanOffRating &lt;dbl&gt;, RollingMeanDefRating &lt;dbl&gt;,
-## #   CumulativeWinQuality &lt;dbl&gt;, OpponentRollingPace &lt;dbl&gt;, OpponentSRS &lt;dbl&gt;,
-## #   OpponentRollingMeanOffRating &lt;dbl&gt;, OpponentRollingMeanDefRating &lt;dbl&gt;,
-## #   OpponentCumulativeWinQuality &lt;dbl&gt;</code></pre>
-<p>Looking at the metrics.</p>
-<pre class="r"><code>metrics(trainpredict, Outcome, .pred_class)</code></pre>
-<pre><code>## # A tibble: 2 x 3
-##   .metric  .estimator .estimate
-##   &lt;chr&gt;    &lt;chr&gt;          &lt;dbl&gt;
-## 1 accuracy binary         0.986
-## 2 kap      binary         0.971</code></pre>
-<pre class="r"><code>trainpredict %&gt;%
-  conf_mat(Outcome, .pred_class)</code></pre>
-<pre><code>##           Truth
-## Prediction    L    W
-##          L 9962  147
-##          W  140 9837</code></pre>
-<p>Now doing the same things but with the test data.</p>
-<pre class="r"><code>testpredict &lt;- log_fit %&gt;% predict(new_data = log_test) %&gt;%
-  bind_cols(log_test)
-
-testpredict</code></pre>
-<pre><code>## # A tibble: 5,021 x 16
-##    .pred_class Season  Team    Date       Opponent   Outcome RollingPace TeamSRS
-##    &lt;fct&gt;       &lt;chr&gt;   &lt;chr&gt;   &lt;date&gt;     &lt;chr&gt;      &lt;fct&gt;         &lt;dbl&gt;   &lt;dbl&gt;
-##  1 L           2014-2~ Air Fo~ 2015-03-11 New Mexico W              63.8   -1.85
-##  2 W           2014-2~ Akron   2015-03-11 Western M~ W              60.0    3.65
-##  3 L           2014-2~ Alabam~ 2015-01-17 Alabama S~ L              67.0  -17.2 
-##  4 L           2014-2~ Alabam~ 2015-01-31 Prairie V~ L              68.1  -17.2 
-##  5 L           2014-2~ Alabam~ 2015-02-14 Alabama S~ W              68.2  -17.2 
-##  6 W           2014-2~ Alabam~ 2015-01-17 Alabama A~ W              69.3   -8.97
-##  7 W           2014-2~ Alabam~ 2015-02-14 Alabama A~ L              67.8   -8.97
-##  8 W           2014-2~ Alabam~ 2015-02-21 Alcorn St~ W              67.8   -8.97
-##  9 L           2014-2~ Alabam~ 2015-02-23 Southern   W              69.0   -8.97
-## 10 L           2014-2~ Alabam~ 2015-03-13 Southern   L              72.5   -8.97
-## # ... with 5,011 more rows, and 8 more variables: RollingMeanOffRating &lt;dbl&gt;,
-## #   RollingMeanDefRating &lt;dbl&gt;, CumulativeWinQuality &lt;dbl&gt;,
-## #   OpponentRollingPace &lt;dbl&gt;, OpponentSRS &lt;dbl&gt;,
-## #   OpponentRollingMeanOffRating &lt;dbl&gt;, OpponentRollingMeanDefRating &lt;dbl&gt;,
-## #   OpponentCumulativeWinQuality &lt;dbl&gt;</code></pre>
-<pre class="r"><code>testpredict &lt;- log_fit %&gt;% predict(new_data = log_test, type=&quot;prob&quot;) %&gt;%
-  bind_cols(testpredict)
-
-testpredict</code></pre>
-<pre><code>## # A tibble: 5,021 x 18
-##    .pred_L .pred_W .pred_class Season   Team      Date       Opponent    Outcome
-##      &lt;dbl&gt;   &lt;dbl&gt; &lt;fct&gt;       &lt;chr&gt;    &lt;chr&gt;     &lt;date&gt;     &lt;chr&gt;       &lt;fct&gt;  
-##  1   0.612   0.388 L           2014-20~ Air Force 2015-03-11 New Mexico  W      
-##  2   0.407   0.593 W           2014-20~ Akron     2015-03-11 Western Mi~ W      
-##  3   0.807   0.193 L           2014-20~ Alabama ~ 2015-01-17 Alabama St~ L      
-##  4   0.654   0.346 L           2014-20~ Alabama ~ 2015-01-31 Prairie Vi~ L      
-##  5   0.860   0.140 L           2014-20~ Alabama ~ 2015-02-14 Alabama St~ W      
-##  6   0.230   0.770 W           2014-20~ Alabama ~ 2015-01-17 Alabama A&amp;M W      
-##  7   0.156   0.844 W           2014-20~ Alabama ~ 2015-02-14 Alabama A&amp;M L      
-##  8   0.188   0.812 W           2014-20~ Alabama ~ 2015-02-21 Alcorn Sta~ W      
-##  9   0.575   0.425 L           2014-20~ Alabama ~ 2015-02-23 Southern    W      
-## 10   0.550   0.450 L           2014-20~ Alabama ~ 2015-03-13 Southern    L      
-## # ... with 5,011 more rows, and 10 more variables: RollingPace &lt;dbl&gt;,
-## #   TeamSRS &lt;dbl&gt;, RollingMeanOffRating &lt;dbl&gt;, RollingMeanDefRating &lt;dbl&gt;,
-## #   CumulativeWinQuality &lt;dbl&gt;, OpponentRollingPace &lt;dbl&gt;, OpponentSRS &lt;dbl&gt;,
-## #   OpponentRollingMeanOffRating &lt;dbl&gt;, OpponentRollingMeanDefRating &lt;dbl&gt;,
-## #   OpponentCumulativeWinQuality &lt;dbl&gt;</code></pre>
-<pre class="r"><code>metrics(testpredict, Outcome, .pred_class)</code></pre>
-<pre><code>## # A tibble: 2 x 3
-##   .metric  .estimator .estimate
-##   &lt;chr&gt;    &lt;chr&gt;          &lt;dbl&gt;
-## 1 accuracy binary         0.692
-## 2 kap      binary         0.384</code></pre>
-</div>
-<div id="play-in-games" class="section level2">
-<h2>Play In Games</h2>
-<pre class="r"><code>playin &lt;- tibble(
-  Team=&quot;Norfolk State&quot;,
-  Opponent=&quot;Appalachian State&quot;,
-  Date = as.Date(&quot;2021-03-18&quot;)
-) %&gt;% add_row(
-  Team=&quot;Wichita State&quot;,
-  Opponent=&quot;Drake&quot;,
-  Date = as.Date(&quot;2021-03-18&quot;)
-) %&gt;% add_row(
-  Team=&quot;Mount St. Mary&#39;s&quot;,
-  Opponent=&quot;Texas Southern&quot;,
-  Date = as.Date(&quot;2021-03-18&quot;)
-) %&gt;% add_row(
-  Team=&quot;Michigan State&quot;,
-  Opponent=&quot;UCLA&quot;,
-  Date = as.Date(&quot;2021-03-18&quot;)
-)</code></pre>
-<pre class="r"><code>playingames &lt;- selectedgames %&gt;% group_by(Team) %&gt;% filter(Date == max(Date), Season == &quot;2020-2021&quot;) %&gt;% select(-Date, -Opponent, -Outcome) %&gt;% right_join(playin)</code></pre>
-<pre><code>## Joining, by = &quot;Team&quot;</code></pre>
-<pre class="r"><code>playingames &lt;- opponentgames %&gt;% group_by(Opponent) %&gt;% filter(Date == max(Date)) %&gt;% ungroup()  %&gt;% select(-Season, -Date, -Outcome) %&gt;% right_join(playingames, by=c(&quot;Opponent&quot;)) %&gt;% select(Team, everything())
-
-playresults &lt;- log_fit %&gt;% predict(new_data = playingames) %&gt;%
-  bind_cols(playingames) 
-
-log_fit %&gt;% predict(new_data = playresults, type=&quot;prob&quot;) %&gt;%
-  bind_cols(playresults)</code></pre>
-<pre><code>## # A tibble: 4 x 19
-##   .pred_L .pred_W .pred_class Team     Opponent   OpponentScore OpponentRolling~
-##     &lt;dbl&gt;   &lt;dbl&gt; &lt;fct&gt;       &lt;chr&gt;    &lt;chr&gt;              &lt;dbl&gt;            &lt;dbl&gt;
-## 1   0.620   0.380 L           Norfolk~ Appalachi~            80             79.2
-## 2   0.550   0.450 L           Wichita~ Drake                 65             74.5
-## 3   0.471   0.529 W           Mount S~ Texas Sou~            80             70.7
-## 4   0.513   0.487 L           Michiga~ UCLA                  79             70.8
-## # ... with 12 more variables: OpponentSRS &lt;dbl&gt;,
-## #   OpponentRollingMeanOffRating &lt;dbl&gt;, OpponentRollingMeanDefRating &lt;dbl&gt;,
-## #   OpponentCumulativeWinQuality &lt;dbl&gt;, Season &lt;chr&gt;, TeamScore &lt;dbl&gt;,
-## #   RollingPace &lt;dbl&gt;, TeamSRS &lt;dbl&gt;, RollingMeanOffRating &lt;dbl&gt;,
-## #   RollingMeanDefRating &lt;dbl&gt;, CumulativeWinQuality &lt;dbl&gt;, Date &lt;date&gt;</code></pre>
-<p>Winners: Appalachian State, Drake, Texas Southern, and UCLA</p>
-</div>
-<div id="west-regional-round-1" class="section level2">
-<h2>West Regional: Round 1</h2>
-<pre class="r"><code># Correct spellings of play in games
-# Norfolk State or Appalachian State in first game against Gonzaga
-# Wichita State or Drake against USC
-
-west &lt;- tibble(
-  Team=&quot;Gonzaga&quot;,
-  Opponent=&quot;Appalachian State&quot;,
-  Date = as.Date(&quot;2021-03-19&quot;)
-) %&gt;% add_row(
-  Team=&quot;Oklahoma&quot;,
-  Opponent=&quot;Missouri&quot;,
-  Date = as.Date(&quot;2021-03-19&quot;)
-) %&gt;% add_row(
-  Team=&quot;Creighton&quot;,
-  Opponent=&quot;UC-Santa Barbara&quot;,
-  Date = as.Date(&quot;2021-03-19&quot;)
-) %&gt;% add_row(
-  Team=&quot;Virginia&quot;,
-  Opponent=&quot;Ohio&quot;,
-  Date = as.Date(&quot;2021-03-19&quot;)
-) %&gt;% add_row(
-  Team=&quot;Southern California&quot;,
-  Opponent=&quot;Drake&quot;,
-  Date = as.Date(&quot;2021-03-19&quot;)
-) %&gt;% add_row(
-  Team=&quot;Kansas&quot;,
-  Opponent=&quot;Eastern Washington&quot;,
-  Date = as.Date(&quot;2021-03-19&quot;)
-) %&gt;% add_row(
-  Team=&quot;Oregon&quot;,
-  Opponent=&quot;Virginia Commonwealth&quot;,
-  Date = as.Date(&quot;2021-03-19&quot;)
-) %&gt;% add_row(
-  Team=&quot;Iowa&quot;,
-  Opponent=&quot;Grand Canyon&quot;,
-  Date = as.Date(&quot;2021-03-19&quot;)
-)</code></pre>
-<pre class="r"><code>westgames &lt;- selectedgames %&gt;% group_by(Team) %&gt;% filter(Date == max(Date), Season == &quot;2020-2021&quot;) %&gt;% select(-Date, -Opponent, -Outcome) %&gt;% right_join(west)</code></pre>
-<pre><code>## Joining, by = &quot;Team&quot;</code></pre>
-<pre class="r"><code>westgames &lt;- opponentgames %&gt;% group_by(Opponent) %&gt;% filter(Date == max(Date)) %&gt;% ungroup()  %&gt;% select(-Season, -Date, -Outcome) %&gt;% right_join(westgames, by=c(&quot;Opponent&quot;)) %&gt;% select(Team, everything())
-
-westregional &lt;- log_fit %&gt;% predict(new_data = westgames) %&gt;%
-  bind_cols(westgames) 
-
-log_fit %&gt;% predict(new_data = westregional, type=&quot;prob&quot;) %&gt;%
-  bind_cols(westregional)</code></pre>
-<pre><code>## # A tibble: 8 x 19
-##   .pred_L .pred_W .pred_class Team     Opponent   OpponentScore OpponentRolling~
-##     &lt;dbl&gt;   &lt;dbl&gt; &lt;fct&gt;       &lt;chr&gt;    &lt;chr&gt;              &lt;dbl&gt;            &lt;dbl&gt;
-## 1   0.223   0.777 W           Gonzaga  Appalachi~            80             79.2
-## 2   0.231   0.769 W           Creight~ UC-Santa ~            79             66.1
-## 3   0.280   0.720 W           Souther~ Drake                 65             74.5
-## 4   0.212   0.788 W           Kansas   Eastern W~            65             73.5
-## 5   0.263   0.737 W           Iowa     Grand Can~            74             72.5
-## 6   0.492   0.508 W           Oklahoma Missouri              64             68.5
-## 7   0.263   0.737 W           Virginia Ohio                  84             73.3
-## 8   0.470   0.530 W           Oregon   Virginia ~            65             73.2
-## # ... with 12 more variables: OpponentSRS &lt;dbl&gt;,
-## #   OpponentRollingMeanOffRating &lt;dbl&gt;, OpponentRollingMeanDefRating &lt;dbl&gt;,
-## #   OpponentCumulativeWinQuality &lt;dbl&gt;, Season &lt;chr&gt;, TeamScore &lt;dbl&gt;,
-## #   RollingPace &lt;dbl&gt;, TeamSRS &lt;dbl&gt;, RollingMeanOffRating &lt;dbl&gt;,
-## #   RollingMeanDefRating &lt;dbl&gt;, CumulativeWinQuality &lt;dbl&gt;, Date &lt;date&gt;</code></pre>
-<pre class="r"><code>west32 &lt;- tibble(
-  Team=&quot;Gonzaga&quot;,
-  Opponent=&quot;Oklahoma&quot;,
-  Date = as.Date(&quot;2021-03-19&quot;)
-) %&gt;% add_row(
-  Team=&quot;Creighton&quot;,
-  Opponent=&quot;Virginia&quot;,
-  Date = as.Date(&quot;2021-03-19&quot;)
-) %&gt;% add_row(
-  Team=&quot;Southern California&quot;,
-  Opponent=&quot;Kansas&quot;,
-  Date = as.Date(&quot;2021-03-19&quot;)
-) %&gt;% add_row(
-  Team=&quot;Oregon&quot;,
-  Opponent=&quot;Iowa&quot;,
-  Date = as.Date(&quot;2021-03-19&quot;)
-)</code></pre>
-<pre class="r"><code>westgames32 &lt;- selectedgames %&gt;% group_by(Team) %&gt;% filter(Date == max(Date), Season == &quot;2020-2021&quot;) %&gt;% select(-Date, -Opponent, -Outcome) %&gt;% right_join(west32)</code></pre>
-<pre><code>## Joining, by = &quot;Team&quot;</code></pre>
-<pre class="r"><code>westgames32 &lt;- opponentgames %&gt;% group_by(Opponent) %&gt;% filter(Date == max(Date)) %&gt;% ungroup()  %&gt;% select(-Season, -Date, -Outcome) %&gt;% right_join(westgames32, by=c(&quot;Opponent&quot;)) %&gt;% select(Team, everything())
-
-westregional32 &lt;- log_fit %&gt;% predict(new_data = westgames32) %&gt;%
-  bind_cols(westgames32) 
-
-log_fit %&gt;% predict(new_data = westregional32, type=&quot;prob&quot;) %&gt;%
-  bind_cols(westregional32)</code></pre>
-<pre><code>## # A tibble: 4 x 19
-##   .pred_L .pred_W .pred_class Team       Opponent OpponentScore OpponentRolling~
-##     &lt;dbl&gt;   &lt;dbl&gt; &lt;fct&gt;       &lt;chr&gt;      &lt;chr&gt;            &lt;dbl&gt;            &lt;dbl&gt;
-## 1   0.578   0.422 L           Oregon     Iowa                71             85.2
-## 2   0.568   0.432 L           Southern ~ Kansas              69             75.4
-## 3   0.341   0.659 W           Gonzaga    Oklahoma            62             68.7
-## 4   0.417   0.583 W           Creighton  Virginia            72             62.9
-## # ... with 12 more variables: OpponentSRS &lt;dbl&gt;,
-## #   OpponentRollingMeanOffRating &lt;dbl&gt;, OpponentRollingMeanDefRating &lt;dbl&gt;,
-## #   OpponentCumulativeWinQuality &lt;dbl&gt;, Season &lt;chr&gt;, TeamScore &lt;dbl&gt;,
-## #   RollingPace &lt;dbl&gt;, TeamSRS &lt;dbl&gt;, RollingMeanOffRating &lt;dbl&gt;,
-## #   RollingMeanDefRating &lt;dbl&gt;, CumulativeWinQuality &lt;dbl&gt;, Date &lt;date&gt;</code></pre>
-<pre class="r"><code>west16 &lt;- tibble(
-  Team=&quot;Gonzaga&quot;,
-  Opponent=&quot;Creighton&quot;,
-  Date = as.Date(&quot;2021-03-19&quot;)
-) %&gt;% add_row(
-  Team=&quot;Iowa&quot;,
-  Opponent=&quot;Kansas&quot;,
-  Date = as.Date(&quot;2021-03-19&quot;)
-) </code></pre>
-<pre class="r"><code>westgames16 &lt;- selectedgames %&gt;% group_by(Team) %&gt;% filter(Date == max(Date), Season == &quot;2020-2021&quot;) %&gt;% select(-Date, -Opponent, -Outcome) %&gt;% right_join(west16)</code></pre>
-<pre><code>## Joining, by = &quot;Team&quot;</code></pre>
-<pre class="r"><code>westgames16 &lt;- opponentgames %&gt;% group_by(Opponent) %&gt;% filter(Date == max(Date)) %&gt;% ungroup()  %&gt;% select(-Season, -Date, -Outcome) %&gt;% right_join(westgames16, by=c(&quot;Opponent&quot;)) %&gt;% select(Team, everything())
-
-westregional16 &lt;- log_fit %&gt;% predict(new_data = westgames16) %&gt;%
-  bind_cols(westgames16) 
-
-log_fit %&gt;% predict(new_data = westregional16, type=&quot;prob&quot;) %&gt;%
-  bind_cols(westregional16)</code></pre>
-<pre><code>## # A tibble: 2 x 19
-##   .pred_L .pred_W .pred_class Team    Opponent  OpponentScore OpponentRollingPa~
-##     &lt;dbl&gt;   &lt;dbl&gt; &lt;fct&gt;       &lt;chr&gt;   &lt;chr&gt;             &lt;dbl&gt;              &lt;dbl&gt;
-## 1   0.275   0.725 W           Gonzaga Creighton            48               74.4
-## 2   0.511   0.489 L           Iowa    Kansas               69               75.4
-## # ... with 12 more variables: OpponentSRS &lt;dbl&gt;,
-## #   OpponentRollingMeanOffRating &lt;dbl&gt;, OpponentRollingMeanDefRating &lt;dbl&gt;,
-## #   OpponentCumulativeWinQuality &lt;dbl&gt;, Season &lt;chr&gt;, TeamScore &lt;dbl&gt;,
-## #   RollingPace &lt;dbl&gt;, TeamSRS &lt;dbl&gt;, RollingMeanOffRating &lt;dbl&gt;,
-## #   RollingMeanDefRating &lt;dbl&gt;, CumulativeWinQuality &lt;dbl&gt;, Date &lt;date&gt;</code></pre>
-<pre class="r"><code>west8 &lt;- tibble(
-  Team=&quot;Gonzaga&quot;,
-  Opponent=&quot;Kansas&quot;,
-  Date = as.Date(&quot;2021-03-19&quot;)
-) </code></pre>
-<pre class="r"><code>westgames8 &lt;- selectedgames %&gt;% group_by(Team) %&gt;% filter(Date == max(Date), Season == &quot;2020-2021&quot;) %&gt;% select(-Date, -Opponent, -Outcome) %&gt;% right_join(west8)</code></pre>
-<pre><code>## Joining, by = &quot;Team&quot;</code></pre>
-<pre class="r"><code>westgames8 &lt;- opponentgames %&gt;% group_by(Opponent) %&gt;% filter(Date == max(Date)) %&gt;% ungroup()  %&gt;% select(-Season, -Date, -Outcome) %&gt;% right_join(westgames8, by=c(&quot;Opponent&quot;)) %&gt;% select(Team, everything())
-
-westregional8 &lt;- log_fit %&gt;% predict(new_data = westgames8) %&gt;%
-  bind_cols(westgames8) 
-
-log_fit %&gt;% predict(new_data = westregional8, type=&quot;prob&quot;) %&gt;%
-  bind_cols(westregional8)</code></pre>
-<pre><code>## # A tibble: 1 x 19
-##   .pred_L .pred_W .pred_class Team    Opponent OpponentScore OpponentRollingPace
-##     &lt;dbl&gt;   &lt;dbl&gt; &lt;fct&gt;       &lt;chr&gt;   &lt;chr&gt;            &lt;dbl&gt;               &lt;dbl&gt;
-## 1   0.410   0.590 W           Gonzaga Kansas              69                75.4
-## # ... with 12 more variables: OpponentSRS &lt;dbl&gt;,
-## #   OpponentRollingMeanOffRating &lt;dbl&gt;, OpponentRollingMeanDefRating &lt;dbl&gt;,
-## #   OpponentCumulativeWinQuality &lt;dbl&gt;, Season &lt;chr&gt;, TeamScore &lt;dbl&gt;,
-## #   RollingPace &lt;dbl&gt;, TeamSRS &lt;dbl&gt;, RollingMeanOffRating &lt;dbl&gt;,
-## #   RollingMeanDefRating &lt;dbl&gt;, CumulativeWinQuality &lt;dbl&gt;, Date &lt;date&gt;</code></pre>
-<p>West Final Four Team: Gonzaga</p>
-</div>
-<div id="east" class="section level2">
-<h2>East</h2>
-<pre class="r"><code># Mount St. Mary&#39;s or Texas Southern vs Michigan
-# Michigan State or UCLA vs BYU
-
-east &lt;- tibble(
-  Team=&quot;Michigan&quot;,
-  Opponent=&quot;Texas Southern&quot;,
-  Date = as.Date(&quot;2021-03-19&quot;)
-) %&gt;% add_row(
-  Team=&quot;Louisiana State&quot;,
-  Opponent=&quot;St. Bonaventure&quot;,
-  Date = as.Date(&quot;2021-03-19&quot;)
-) %&gt;% add_row(
-  Team=&quot;Colorado&quot;,
-  Opponent=&quot;Georgetown&quot;,
-  Date = as.Date(&quot;2021-03-19&quot;)
-) %&gt;% add_row(
-  Team=&quot;Florida State&quot;,
-  Opponent=&quot;North Carolina-Greensboro&quot;,
-  Date = as.Date(&quot;2021-03-19&quot;)
-) %&gt;% add_row(
-  Team=&quot;Brigham Young&quot;,
-  Opponent=&quot;UCLA&quot;,
-  Date = as.Date(&quot;2021-03-19&quot;)
-) %&gt;% add_row(
-  Team=&quot;Texas&quot;,
-  Opponent=&quot;Abilene Christian&quot;,
-  Date = as.Date(&quot;2021-03-19&quot;)
-) %&gt;% add_row(
-  Team=&quot;Connecticut&quot;,
-  Opponent=&quot;Maryland&quot;,
-  Date = as.Date(&quot;2021-03-19&quot;)
-) %&gt;% add_row(
-  Team=&quot;Alabama&quot;,
-  Opponent=&quot;Iona&quot;,
-  Date = as.Date(&quot;2021-03-19&quot;)
-)</code></pre>
-<pre class="r"><code>eastgames &lt;- selectedgames %&gt;% group_by(Team) %&gt;% filter(Date == max(Date), Season == &quot;2020-2021&quot;) %&gt;% select(-Date, -Opponent, -Outcome) %&gt;% right_join(east)</code></pre>
-<pre><code>## Joining, by = &quot;Team&quot;</code></pre>
-<pre class="r"><code>eastgames &lt;- opponentgames %&gt;% group_by(Opponent) %&gt;% filter(Date == max(Date)) %&gt;% ungroup()  %&gt;% select(-Season, -Date, -Outcome) %&gt;% right_join(eastgames, by=c(&quot;Opponent&quot;)) %&gt;% select(Team, everything())
-
-eastregional &lt;- log_fit %&gt;% predict(new_data = eastgames) %&gt;%
-  bind_cols(eastgames) 
-
-log_fit %&gt;% predict(new_data = eastregional, type=&quot;prob&quot;) %&gt;%
-  bind_cols(eastregional)</code></pre>
-<pre><code>## # A tibble: 8 x 19
-##   .pred_L .pred_W .pred_class Team    Opponent    OpponentScore OpponentRolling~
-##     &lt;dbl&gt;   &lt;dbl&gt; &lt;fct&gt;       &lt;chr&gt;   &lt;chr&gt;               &lt;dbl&gt;            &lt;dbl&gt;
-## 1  0.283    0.717 W           Texas   Abilene Ch~            79             73.8
-## 2  0.428    0.572 W           Colora~ Georgetown             73             74.4
-## 3  0.221    0.779 W           Alabama Iona                   60             71.7
-## 4  0.539    0.461 L           Connec~ Maryland               66             60.0
-## 5  0.105    0.895 W           Florid~ North Caro~            69             74.5
-## 6  0.488    0.512 W           Louisi~ St. Bonave~            74             70.8
-## 7  0.0799   0.920 W           Michig~ Texas Sout~            80             70.7
-## 8  0.332    0.668 W           Brigha~ UCLA                   79             70.8
-## # ... with 12 more variables: OpponentSRS &lt;dbl&gt;,
-## #   OpponentRollingMeanOffRating &lt;dbl&gt;, OpponentRollingMeanDefRating &lt;dbl&gt;,
-## #   OpponentCumulativeWinQuality &lt;dbl&gt;, Season &lt;chr&gt;, TeamScore &lt;dbl&gt;,
-## #   RollingPace &lt;dbl&gt;, TeamSRS &lt;dbl&gt;, RollingMeanOffRating &lt;dbl&gt;,
-## #   RollingMeanDefRating &lt;dbl&gt;, CumulativeWinQuality &lt;dbl&gt;, Date &lt;date&gt;</code></pre>
-<pre class="r"><code>east32 &lt;- tibble(
-  Team=&quot;Michigan&quot;,
-  Opponent=&quot;Louisiana State&quot;,
-  Date = as.Date(&quot;2021-03-19&quot;)
-) %&gt;% add_row(
-  Team=&quot;Colorado&quot;,
-  Opponent=&quot;Florida State&quot;,
-  Date = as.Date(&quot;2021-03-19&quot;)
-) %&gt;% add_row(
-  Team=&quot;Brigham Young&quot;,
-  Opponent=&quot;Texas&quot;,
-  Date = as.Date(&quot;2021-03-19&quot;)
-) %&gt;% add_row(
-  Team=&quot;Maryland&quot;,
-  Opponent=&quot;Alabama&quot;,
-  Date = as.Date(&quot;2021-03-19&quot;)
-)</code></pre>
-<pre class="r"><code>eastgames32 &lt;- selectedgames %&gt;% group_by(Team) %&gt;% filter(Date == max(Date), Season == &quot;2020-2021&quot;) %&gt;% select(-Date, -Opponent, -Outcome) %&gt;% right_join(east32)</code></pre>
-<pre><code>## Joining, by = &quot;Team&quot;</code></pre>
-<pre class="r"><code>eastgames32 &lt;- opponentgames %&gt;% group_by(Opponent) %&gt;% filter(Date == max(Date)) %&gt;% ungroup()  %&gt;% select(-Season, -Date, -Outcome) %&gt;% right_join(eastgames32, by=c(&quot;Opponent&quot;)) %&gt;% select(Team, everything())
-
-eastregional32 &lt;- log_fit %&gt;% predict(new_data = eastgames32) %&gt;%
-  bind_cols(eastgames32) 
-
-log_fit %&gt;% predict(new_data = eastregional32, type=&quot;prob&quot;) %&gt;%
-  bind_cols(eastregional32)</code></pre>
-<pre><code>## # A tibble: 4 x 19
-##   .pred_L .pred_W .pred_class Team     Opponent   OpponentScore OpponentRolling~
-##     &lt;dbl&gt;   &lt;dbl&gt; &lt;fct&gt;       &lt;chr&gt;    &lt;chr&gt;              &lt;dbl&gt;            &lt;dbl&gt;
-## 1   0.729   0.271 L           Maryland Alabama               80             75.0
-## 2   0.431   0.569 W           Colorado Florida S~            75             78.9
-## 3   0.303   0.697 W           Michigan Louisiana~            79             71.9
-## 4   0.616   0.384 L           Brigham~ Texas                 91             67.9
-## # ... with 12 more variables: OpponentSRS &lt;dbl&gt;,
-## #   OpponentRollingMeanOffRating &lt;dbl&gt;, OpponentRollingMeanDefRating &lt;dbl&gt;,
-## #   OpponentCumulativeWinQuality &lt;dbl&gt;, Season &lt;chr&gt;, TeamScore &lt;dbl&gt;,
-## #   RollingPace &lt;dbl&gt;, TeamSRS &lt;dbl&gt;, RollingMeanOffRating &lt;dbl&gt;,
-## #   RollingMeanDefRating &lt;dbl&gt;, CumulativeWinQuality &lt;dbl&gt;, Date &lt;date&gt;</code></pre>
-<pre class="r"><code>east16 &lt;- tibble(
-  Team=&quot;Michigan&quot;,
-  Opponent=&quot;Colorado&quot;,
-  Date = as.Date(&quot;2021-03-19&quot;)
-) %&gt;% add_row(
-  Team=&quot;Texas&quot;,
-  Opponent=&quot;Alabama&quot;,
-  Date = as.Date(&quot;2021-03-19&quot;)
-)</code></pre>
-<pre class="r"><code>eastgames16 &lt;- selectedgames %&gt;% group_by(Team) %&gt;% filter(Date == max(Date), Season == &quot;2020-2021&quot;) %&gt;% select(-Date, -Opponent, -Outcome) %&gt;% right_join(east16)</code></pre>
-<pre><code>## Joining, by = &quot;Team&quot;</code></pre>
-<pre class="r"><code>eastgames16 &lt;- opponentgames %&gt;% group_by(Opponent) %&gt;% filter(Date == max(Date)) %&gt;% ungroup()  %&gt;% select(-Season, -Date, -Outcome) %&gt;% right_join(eastgames16, by=c(&quot;Opponent&quot;)) %&gt;% select(Team, everything())
-
-eastregional16 &lt;- log_fit %&gt;% predict(new_data = eastgames16) %&gt;%
-  bind_cols(eastgames16) 
-
-log_fit %&gt;% predict(new_data = eastregional16, type=&quot;prob&quot;) %&gt;%
-  bind_cols(eastregional16)</code></pre>
-<pre><code>## # A tibble: 2 x 19
-##   .pred_L .pred_W .pred_class Team     Opponent OpponentScore OpponentRollingPa~
-##     &lt;dbl&gt;   &lt;dbl&gt; &lt;fct&gt;       &lt;chr&gt;    &lt;chr&gt;            &lt;dbl&gt;              &lt;dbl&gt;
-## 1   0.698   0.302 L           Texas    Alabama             80               75.0
-## 2   0.437   0.563 W           Michigan Colorado            68               65.9
-## # ... with 12 more variables: OpponentSRS &lt;dbl&gt;,
-## #   OpponentRollingMeanOffRating &lt;dbl&gt;, OpponentRollingMeanDefRating &lt;dbl&gt;,
-## #   OpponentCumulativeWinQuality &lt;dbl&gt;, Season &lt;chr&gt;, TeamScore &lt;dbl&gt;,
-## #   RollingPace &lt;dbl&gt;, TeamSRS &lt;dbl&gt;, RollingMeanOffRating &lt;dbl&gt;,
-## #   RollingMeanDefRating &lt;dbl&gt;, CumulativeWinQuality &lt;dbl&gt;, Date &lt;date&gt;</code></pre>
-<pre class="r"><code>east8 &lt;- tibble(
-  Team=&quot;Michigan&quot;,
-  Opponent=&quot;Alabama&quot;,
-  Date = as.Date(&quot;2021-03-19&quot;)
-)</code></pre>
-<pre class="r"><code>eastgames8 &lt;- selectedgames %&gt;% group_by(Team) %&gt;% filter(Date == max(Date), Season == &quot;2020-2021&quot;) %&gt;% select(-Date, -Opponent, -Outcome) %&gt;% right_join(east8)</code></pre>
-<pre><code>## Joining, by = &quot;Team&quot;</code></pre>
-<pre class="r"><code>eastgames8 &lt;- opponentgames %&gt;% group_by(Opponent) %&gt;% filter(Date == max(Date)) %&gt;% ungroup()  %&gt;% select(-Season, -Date, -Outcome) %&gt;% right_join(eastgames8, by=c(&quot;Opponent&quot;)) %&gt;% select(Team, everything())
-
-eastregional8 &lt;- log_fit %&gt;% predict(new_data = eastgames8) %&gt;%
-  bind_cols(eastgames8) 
-
-log_fit %&gt;% predict(new_data = eastregional8, type=&quot;prob&quot;) %&gt;%
-  bind_cols(eastregional8)</code></pre>
-<pre><code>## # A tibble: 1 x 19
-##   .pred_L .pred_W .pred_class Team     Opponent OpponentScore OpponentRollingPa~
-##     &lt;dbl&gt;   &lt;dbl&gt; &lt;fct&gt;       &lt;chr&gt;    &lt;chr&gt;            &lt;dbl&gt;              &lt;dbl&gt;
-## 1   0.488   0.512 W           Michigan Alabama             80               75.0
-## # ... with 12 more variables: OpponentSRS &lt;dbl&gt;,
-## #   OpponentRollingMeanOffRating &lt;dbl&gt;, OpponentRollingMeanDefRating &lt;dbl&gt;,
-## #   OpponentCumulativeWinQuality &lt;dbl&gt;, Season &lt;chr&gt;, TeamScore &lt;dbl&gt;,
-## #   RollingPace &lt;dbl&gt;, TeamSRS &lt;dbl&gt;, RollingMeanOffRating &lt;dbl&gt;,
-## #   RollingMeanDefRating &lt;dbl&gt;, CumulativeWinQuality &lt;dbl&gt;, Date &lt;date&gt;</code></pre>
-<p>Final Four East Team: Michigan</p>
-</div>
-<div id="south" class="section level2">
-<h2>South</h2>
-<pre class="r"><code>south &lt;- tibble(
-  Team=&quot;Baylor&quot;,
-  Opponent=&quot;Hartford&quot;,
-  Date = as.Date(&quot;2021-03-19&quot;)
-) %&gt;% add_row(
-  Team=&quot;North Carolina&quot;,
-  Opponent=&quot;Wisconsin&quot;,
-  Date = as.Date(&quot;2021-03-19&quot;)
-) %&gt;% add_row(
-  Team=&quot;Villanova&quot;,
-  Opponent=&quot;Winthrop&quot;,
-  Date = as.Date(&quot;2021-03-19&quot;)
-) %&gt;% add_row(
-  Team=&quot;Purdue&quot;,
-  Opponent=&quot;North Texas&quot;,
-  Date = as.Date(&quot;2021-03-19&quot;)
-) %&gt;% add_row(
-  Team=&quot;Texas Tech&quot;,
-  Opponent=&quot;Utah State&quot;,
-  Date = as.Date(&quot;2021-03-19&quot;)
-) %&gt;% add_row(
-  Team=&quot;Arkansas&quot;,
-  Opponent=&quot;Colgate&quot;,
-  Date = as.Date(&quot;2021-03-19&quot;)
-) %&gt;% add_row(
-  Team=&quot;Florida&quot;,
-  Opponent=&quot;Virginia Tech&quot;,
-  Date = as.Date(&quot;2021-03-19&quot;)
-) %&gt;% add_row(
-  Team=&quot;Ohio State&quot;,
-  Opponent=&quot;Oral Roberts&quot;,
-  Date = as.Date(&quot;2021-03-19&quot;)
-) </code></pre>
-<pre class="r"><code>southgames &lt;- selectedgames %&gt;% group_by(Team) %&gt;% filter(Date == max(Date), Season == &quot;2020-2021&quot;) %&gt;% select(-Date, -Opponent, -Outcome) %&gt;% right_join(south)</code></pre>
-<pre><code>## Joining, by = &quot;Team&quot;</code></pre>
-<pre class="r"><code>southgames &lt;- opponentgames %&gt;% group_by(Opponent) %&gt;% filter(Date == max(Date)) %&gt;% ungroup()  %&gt;% select(-Season, -Date, -Outcome) %&gt;% right_join(southgames, by=c(&quot;Opponent&quot;)) %&gt;% select(Team, everything())
-
-southregional &lt;- log_fit %&gt;% predict(new_data = southgames) %&gt;%
-  bind_cols(southgames) 
-
-log_fit %&gt;% predict(new_data = southregional, type=&quot;prob&quot;) %&gt;%
-  bind_cols(southregional)</code></pre>
-<pre><code>## # A tibble: 8 x 19
-##   .pred_L .pred_W .pred_class Team     Opponent   OpponentScore OpponentRolling~
-##     &lt;dbl&gt;   &lt;dbl&gt; &lt;fct&gt;       &lt;chr&gt;    &lt;chr&gt;              &lt;dbl&gt;            &lt;dbl&gt;
-## 1   0.636   0.364 L           Arkansas Colgate               85             73.2
-## 2   0.105   0.895 W           Baylor   Hartford              64             71.9
-## 3   0.245   0.755 W           Purdue   North Tex~            61             62.0
-## 4   0.219   0.781 W           Ohio St~ Oral Robe~            75             74.7
-## 5   0.316   0.684 W           Texas T~ Utah State            57             77  
-## 6   0.410   0.590 W           Florida  Virginia ~            73             66.2
-## 7   0.305   0.695 W           Villano~ Winthrop              80             78.5
-## 8   0.626   0.374 L           North C~ Wisconsin             57             67.0
-## # ... with 12 more variables: OpponentSRS &lt;dbl&gt;,
-## #   OpponentRollingMeanOffRating &lt;dbl&gt;, OpponentRollingMeanDefRating &lt;dbl&gt;,
-## #   OpponentCumulativeWinQuality &lt;dbl&gt;, Season &lt;chr&gt;, TeamScore &lt;dbl&gt;,
-## #   RollingPace &lt;dbl&gt;, TeamSRS &lt;dbl&gt;, RollingMeanOffRating &lt;dbl&gt;,
-## #   RollingMeanDefRating &lt;dbl&gt;, CumulativeWinQuality &lt;dbl&gt;, Date &lt;date&gt;</code></pre>
-<pre class="r"><code>south32 &lt;- tibble(
-  Team=&quot;Baylor&quot;,
-  Opponent=&quot;Wisconsin&quot;,
-  Date = as.Date(&quot;2021-03-19&quot;)
-) %&gt;% add_row(
-  Team=&quot;Villanova&quot;,
-  Opponent=&quot;Purdue&quot;,
-  Date = as.Date(&quot;2021-03-19&quot;)
-) %&gt;% add_row(
-  Team=&quot;Texas Tech&quot;,
-  Opponent=&quot;Colgate&quot;,
-  Date = as.Date(&quot;2021-03-19&quot;)
-) %&gt;% add_row(
-  Team=&quot;Virginia Tech&quot;,
-  Opponent=&quot;Ohio State&quot;,
-  Date = as.Date(&quot;2021-03-19&quot;)
-)</code></pre>
-<pre class="r"><code>southgames32 &lt;- selectedgames %&gt;% group_by(Team) %&gt;% filter(Date == max(Date), Season == &quot;2020-2021&quot;) %&gt;% select(-Date, -Opponent, -Outcome) %&gt;% right_join(south32)</code></pre>
-<pre><code>## Joining, by = &quot;Team&quot;</code></pre>
-<pre class="r"><code>southgames32 &lt;- opponentgames %&gt;% group_by(Opponent) %&gt;% filter(Date == max(Date)) %&gt;% ungroup()  %&gt;% select(-Season, -Date, -Outcome) %&gt;% right_join(southgames32, by=c(&quot;Opponent&quot;)) %&gt;% select(Team, everything())
-
-southregional32 &lt;- log_fit %&gt;% predict(new_data = southgames32) %&gt;%
-  bind_cols(southgames32) 
-
-log_fit %&gt;% predict(new_data = southregional32, type=&quot;prob&quot;) %&gt;%
-  bind_cols(southregional32)</code></pre>
-<pre><code>## # A tibble: 4 x 19
-##   .pred_L .pred_W .pred_class Team      Opponent OpponentScore OpponentRollingP~
-##     &lt;dbl&gt;   &lt;dbl&gt; &lt;fct&gt;       &lt;chr&gt;     &lt;chr&gt;            &lt;dbl&gt;             &lt;dbl&gt;
-## 1   0.674   0.326 L           Texas Te~ Colgate             85              73.2
-## 2   0.792   0.208 L           Virginia~ Ohio St~            88              63.9
-## 3   0.507   0.493 L           Villanova Purdue              78              64.4
-## 4   0.214   0.786 W           Baylor    Wiscons~            57              67.0
-## # ... with 12 more variables: OpponentSRS &lt;dbl&gt;,
-## #   OpponentRollingMeanOffRating &lt;dbl&gt;, OpponentRollingMeanDefRating &lt;dbl&gt;,
-## #   OpponentCumulativeWinQuality &lt;dbl&gt;, Season &lt;chr&gt;, TeamScore &lt;dbl&gt;,
-## #   RollingPace &lt;dbl&gt;, TeamSRS &lt;dbl&gt;, RollingMeanOffRating &lt;dbl&gt;,
-## #   RollingMeanDefRating &lt;dbl&gt;, CumulativeWinQuality &lt;dbl&gt;, Date &lt;date&gt;</code></pre>
-<pre class="r"><code>south16 &lt;- tibble(
-  Team=&quot;Baylor&quot;,
-  Opponent=&quot;Purdue&quot;,
-  Date = as.Date(&quot;2021-03-19&quot;)
-) %&gt;% add_row(
-  Team=&quot;Ohio State&quot;,
-  Opponent=&quot;Colgate&quot;,
-  Date = as.Date(&quot;2021-03-19&quot;)
-)</code></pre>
-<pre class="r"><code>southgames16 &lt;- selectedgames %&gt;% group_by(Team) %&gt;% filter(Date == max(Date), Season == &quot;2020-2021&quot;) %&gt;% select(-Date, -Opponent, -Outcome) %&gt;% right_join(south16)</code></pre>
-<pre><code>## Joining, by = &quot;Team&quot;</code></pre>
-<pre class="r"><code>southgames16 &lt;- opponentgames %&gt;% group_by(Opponent) %&gt;% filter(Date == max(Date)) %&gt;% ungroup()  %&gt;% select(-Season, -Date, -Outcome) %&gt;% right_join(southgames16, by=c(&quot;Opponent&quot;)) %&gt;% select(Team, everything())
-
-southregional16 &lt;- log_fit %&gt;% predict(new_data = southgames16) %&gt;%
-  bind_cols(southgames16) 
-
-log_fit %&gt;% predict(new_data = southregional16, type=&quot;prob&quot;) %&gt;%
-  bind_cols(southregional16)</code></pre>
-<pre><code>## # A tibble: 2 x 19
-##   .pred_L .pred_W .pred_class Team      Opponent OpponentScore OpponentRollingP~
-##     &lt;dbl&gt;   &lt;dbl&gt; &lt;fct&gt;       &lt;chr&gt;     &lt;chr&gt;            &lt;dbl&gt;             &lt;dbl&gt;
-## 1   0.569   0.431 L           Ohio Sta~ Colgate             85              73.2
-## 2   0.289   0.711 W           Baylor    Purdue              78              64.4
-## # ... with 12 more variables: OpponentSRS &lt;dbl&gt;,
-## #   OpponentRollingMeanOffRating &lt;dbl&gt;, OpponentRollingMeanDefRating &lt;dbl&gt;,
-## #   OpponentCumulativeWinQuality &lt;dbl&gt;, Season &lt;chr&gt;, TeamScore &lt;dbl&gt;,
-## #   RollingPace &lt;dbl&gt;, TeamSRS &lt;dbl&gt;, RollingMeanOffRating &lt;dbl&gt;,
-## #   RollingMeanDefRating &lt;dbl&gt;, CumulativeWinQuality &lt;dbl&gt;, Date &lt;date&gt;</code></pre>
-<pre class="r"><code>south8 &lt;- tibble(
-  Team=&quot;Baylor&quot;,
-  Opponent=&quot;Colgate&quot;,
-  Date = as.Date(&quot;2021-03-19&quot;)
-)</code></pre>
-<pre class="r"><code>southgames8 &lt;- selectedgames %&gt;% group_by(Team) %&gt;% filter(Date == max(Date), Season == &quot;2020-2021&quot;) %&gt;% select(-Date, -Opponent, -Outcome) %&gt;% right_join(south8)</code></pre>
-<pre><code>## Joining, by = &quot;Team&quot;</code></pre>
-<pre class="r"><code>southgames8 &lt;- opponentgames %&gt;% group_by(Opponent) %&gt;% filter(Date == max(Date)) %&gt;% ungroup()  %&gt;% select(-Season, -Date, -Outcome) %&gt;% right_join(southgames8, by=c(&quot;Opponent&quot;)) %&gt;% select(Team, everything())
-
-southregional8 &lt;- log_fit %&gt;% predict(new_data = southgames8) %&gt;%
-  bind_cols(southgames8) 
-
-log_fit %&gt;% predict(new_data = southregional8, type=&quot;prob&quot;) %&gt;%
-  bind_cols(southregional8)</code></pre>
-<pre><code>## # A tibble: 1 x 19
-##   .pred_L .pred_W .pred_class Team   Opponent OpponentScore OpponentRollingPace
-##     &lt;dbl&gt;   &lt;dbl&gt; &lt;fct&gt;       &lt;chr&gt;  &lt;chr&gt;            &lt;dbl&gt;               &lt;dbl&gt;
-## 1   0.391   0.609 W           Baylor Colgate             85                73.2
-## # ... with 12 more variables: OpponentSRS &lt;dbl&gt;,
-## #   OpponentRollingMeanOffRating &lt;dbl&gt;, OpponentRollingMeanDefRating &lt;dbl&gt;,
-## #   OpponentCumulativeWinQuality &lt;dbl&gt;, Season &lt;chr&gt;, TeamScore &lt;dbl&gt;,
-## #   RollingPace &lt;dbl&gt;, TeamSRS &lt;dbl&gt;, RollingMeanOffRating &lt;dbl&gt;,
-## #   RollingMeanDefRating &lt;dbl&gt;, CumulativeWinQuality &lt;dbl&gt;, Date &lt;date&gt;</code></pre>
-<p>Final Four South Team: Baylor</p>
-</div>
-<div id="midwest" class="section level2">
-<h2>Midwest</h2>
-<pre class="r"><code>midwest &lt;- tibble(
-  Team=&quot;Illinois&quot;,
-  Opponent=&quot;Drexel&quot;,
-  Date = as.Date(&quot;2021-03-19&quot;)
-) %&gt;% add_row(
-  Team=&quot;Loyola (IL)&quot;,
-  Opponent=&quot;Georgia Tech&quot;,
-  Date = as.Date(&quot;2021-03-19&quot;)
-) %&gt;% add_row(
-  Team=&quot;Tennessee&quot;,
-  Opponent=&quot;Oregon State&quot;,
-  Date = as.Date(&quot;2021-03-19&quot;)
-) %&gt;% add_row(
-  Team=&quot;Oklahoma State&quot;,
-  Opponent=&quot;Liberty&quot;,
-  Date = as.Date(&quot;2021-03-19&quot;)
-) %&gt;% add_row(
-  Team=&quot;San Diego State&quot;,
-  Opponent=&quot;Syracuse&quot;,
-  Date = as.Date(&quot;2021-03-19&quot;)
-) %&gt;% add_row(
-  Team=&quot;West Virginia&quot;,
-  Opponent=&quot;Morehead State&quot;,
-  Date = as.Date(&quot;2021-03-19&quot;)
-) %&gt;% add_row(
-  Team=&quot;Clemson&quot;,
-  Opponent=&quot;Rutgers&quot;,
-  Date = as.Date(&quot;2021-03-19&quot;)
-) %&gt;% add_row(
-  Team=&quot;Houston&quot;,
-  Opponent=&quot;Cleveland State&quot;,
-  Date = as.Date(&quot;2021-03-19&quot;)
-)</code></pre>
-<pre class="r"><code>midwestgames &lt;- selectedgames %&gt;% group_by(Team) %&gt;% filter(Date == max(Date), Season == &quot;2020-2021&quot;) %&gt;% select(-Date, -Opponent, -Outcome) %&gt;% right_join(midwest)</code></pre>
-<pre><code>## Joining, by = &quot;Team&quot;</code></pre>
-<pre class="r"><code>midwestgames &lt;- opponentgames %&gt;% group_by(Opponent) %&gt;% filter(Date == max(Date)) %&gt;% ungroup()  %&gt;% select(-Season, -Date, -Outcome) %&gt;% right_join(midwestgames, by=c(&quot;Opponent&quot;)) %&gt;% select(Team, everything())
-
-midwestregional &lt;- log_fit %&gt;% predict(new_data = midwestgames) %&gt;%
-  bind_cols(midwestgames) 
-
-log_fit %&gt;% predict(new_data = midwestregional, type=&quot;prob&quot;) %&gt;%
-  bind_cols(midwestregional)</code></pre>
-<pre><code>## # A tibble: 8 x 19
-##   .pred_L .pred_W .pred_class Team     Opponent   OpponentScore OpponentRolling~
-##     &lt;dbl&gt;   &lt;dbl&gt; &lt;fct&gt;       &lt;chr&gt;    &lt;chr&gt;              &lt;dbl&gt;            &lt;dbl&gt;
-## 1  0.0657   0.934 W           Houston  Cleveland~            80             68.3
-## 2  0.196    0.804 W           Illinois Drexel                63             66.1
-## 3  0.280    0.720 W           Loyola ~ Georgia T~            80             67.7
-## 4  0.371    0.629 W           Oklahom~ Liberty               79             66.3
-## 5  0.207    0.793 W           West Vi~ Morehead ~            86             66.7
-## 6  0.380    0.620 W           Tenness~ Oregon St~            70             70.4
-## 7  0.644    0.356 L           Clemson  Rutgers               68             77.4
-## 8  0.370    0.630 W           San Die~ Syracuse              69             71.8
-## # ... with 12 more variables: OpponentSRS &lt;dbl&gt;,
-## #   OpponentRollingMeanOffRating &lt;dbl&gt;, OpponentRollingMeanDefRating &lt;dbl&gt;,
-## #   OpponentCumulativeWinQuality &lt;dbl&gt;, Season &lt;chr&gt;, TeamScore &lt;dbl&gt;,
-## #   RollingPace &lt;dbl&gt;, TeamSRS &lt;dbl&gt;, RollingMeanOffRating &lt;dbl&gt;,
-## #   RollingMeanDefRating &lt;dbl&gt;, CumulativeWinQuality &lt;dbl&gt;, Date &lt;date&gt;</code></pre>
-<pre class="r"><code>midwest32 &lt;- tibble(
-  Team=&quot;Illinois&quot;,
-  Opponent=&quot;Loyola (IL)&quot;,
-  Date = as.Date(&quot;2021-03-19&quot;)
-) %&gt;% add_row(
-  Team=&quot;Tennessee&quot;,
-  Opponent=&quot;Oklahoma State&quot;,
-  Date = as.Date(&quot;2021-03-19&quot;)
-) %&gt;% add_row(
-  Team=&quot;San Diego State&quot;,
-  Opponent=&quot;West Virginia&quot;,
-  Date = as.Date(&quot;2021-03-19&quot;)
-) %&gt;% add_row(
-  Team=&quot;Rutgers&quot;,
-  Opponent=&quot;Houston&quot;,
-  Date = as.Date(&quot;2021-03-19&quot;)
-)</code></pre>
-<pre class="r"><code>midwestgames32 &lt;- selectedgames %&gt;% group_by(Team) %&gt;% filter(Date == max(Date), Season == &quot;2020-2021&quot;) %&gt;% select(-Date, -Opponent, -Outcome) %&gt;% right_join(midwest32)</code></pre>
-<pre><code>## Joining, by = &quot;Team&quot;</code></pre>
-<pre class="r"><code>midwestgames32 &lt;- opponentgames %&gt;% group_by(Opponent) %&gt;% filter(Date == max(Date)) %&gt;% ungroup()  %&gt;% select(-Season, -Date, -Outcome) %&gt;% right_join(midwestgames32, by=c(&quot;Opponent&quot;)) %&gt;% select(Team, everything())
-
-midwestregional32 &lt;- log_fit %&gt;% predict(new_data = midwestgames32) %&gt;%
-  bind_cols(midwestgames32) 
-
-log_fit %&gt;% predict(new_data = midwestregional32, type=&quot;prob&quot;) %&gt;%
-  bind_cols(midwestregional32)</code></pre>
-<pre><code>## # A tibble: 4 x 19
-##   .pred_L .pred_W .pred_class Team     Opponent   OpponentScore OpponentRolling~
-##     &lt;dbl&gt;   &lt;dbl&gt; &lt;fct&gt;       &lt;chr&gt;    &lt;chr&gt;              &lt;dbl&gt;            &lt;dbl&gt;
-## 1   0.717   0.283 L           Rutgers  Houston               91             66.7
-## 2   0.244   0.756 W           Illinois Loyola (I~            75             66.8
-## 3   0.516   0.484 L           Tenness~ Oklahoma ~            86             78.3
-## 4   0.327   0.673 W           San Die~ West Virg~            69             67.9
-## # ... with 12 more variables: OpponentSRS &lt;dbl&gt;,
-## #   OpponentRollingMeanOffRating &lt;dbl&gt;, OpponentRollingMeanDefRating &lt;dbl&gt;,
-## #   OpponentCumulativeWinQuality &lt;dbl&gt;, Season &lt;chr&gt;, TeamScore &lt;dbl&gt;,
-## #   RollingPace &lt;dbl&gt;, TeamSRS &lt;dbl&gt;, RollingMeanOffRating &lt;dbl&gt;,
-## #   RollingMeanDefRating &lt;dbl&gt;, CumulativeWinQuality &lt;dbl&gt;, Date &lt;date&gt;</code></pre>
-<pre class="r"><code>midwest16 &lt;- tibble(
-  Team=&quot;Illinois&quot;,
-  Opponent=&quot;Oklahoma State&quot;,
-  Date = as.Date(&quot;2021-03-19&quot;)
-) %&gt;% add_row(
-  Team=&quot;San Diego State&quot;,
-  Opponent=&quot;Houston&quot;,
-  Date = as.Date(&quot;2021-03-19&quot;)
-)</code></pre>
-<pre class="r"><code>midwestgames16 &lt;- selectedgames %&gt;% group_by(Team) %&gt;% filter(Date == max(Date), Season == &quot;2020-2021&quot;) %&gt;% select(-Date, -Opponent, -Outcome) %&gt;% right_join(midwest16)</code></pre>
-<pre><code>## Joining, by = &quot;Team&quot;</code></pre>
-<pre class="r"><code>midwestgames16 &lt;- opponentgames %&gt;% group_by(Opponent) %&gt;% filter(Date == max(Date)) %&gt;% ungroup()  %&gt;% select(-Season, -Date, -Outcome) %&gt;% right_join(midwestgames16, by=c(&quot;Opponent&quot;)) %&gt;% select(Team, everything())
-
-midwestregional16 &lt;- log_fit %&gt;% predict(new_data = midwestgames16) %&gt;%
-  bind_cols(midwestgames16) 
-
-log_fit %&gt;% predict(new_data = midwestregional16, type=&quot;prob&quot;) %&gt;%
-  bind_cols(midwestregional16)</code></pre>
-<pre><code>## # A tibble: 2 x 19
-##   .pred_L .pred_W .pred_class Team     Opponent   OpponentScore OpponentRolling~
-##     &lt;dbl&gt;   &lt;dbl&gt; &lt;fct&gt;       &lt;chr&gt;    &lt;chr&gt;              &lt;dbl&gt;            &lt;dbl&gt;
-## 1   0.621   0.379 L           San Die~ Houston               91             66.7
-## 2   0.316   0.684 W           Illinois Oklahoma ~            86             78.3
-## # ... with 12 more variables: OpponentSRS &lt;dbl&gt;,
-## #   OpponentRollingMeanOffRating &lt;dbl&gt;, OpponentRollingMeanDefRating &lt;dbl&gt;,
-## #   OpponentCumulativeWinQuality &lt;dbl&gt;, Season &lt;chr&gt;, TeamScore &lt;dbl&gt;,
-## #   RollingPace &lt;dbl&gt;, TeamSRS &lt;dbl&gt;, RollingMeanOffRating &lt;dbl&gt;,
-## #   RollingMeanDefRating &lt;dbl&gt;, CumulativeWinQuality &lt;dbl&gt;, Date &lt;date&gt;</code></pre>
-<pre class="r"><code>midwest8 &lt;- tibble(
-  Team=&quot;Houston&quot;,
-  Opponent=&quot;Illinois&quot;,
-  Date = as.Date(&quot;2021-03-19&quot;)
-)</code></pre>
-<pre class="r"><code>midwestgames8 &lt;- selectedgames %&gt;% group_by(Team) %&gt;% filter(Date == max(Date), Season == &quot;2020-2021&quot;) %&gt;% select(-Date, -Opponent, -Outcome) %&gt;% right_join(midwest8)</code></pre>
-<pre><code>## Joining, by = &quot;Team&quot;</code></pre>
-<pre class="r"><code>midwestgames8 &lt;- opponentgames %&gt;% group_by(Opponent) %&gt;% filter(Date == max(Date)) %&gt;% ungroup()  %&gt;% select(-Season, -Date, -Outcome) %&gt;% right_join(midwestgames8, by=c(&quot;Opponent&quot;)) %&gt;% select(Team, everything())
-
-midwestregional8 &lt;- log_fit %&gt;% predict(new_data = midwestgames8) %&gt;%
-  bind_cols(midwestgames8) 
-
-log_fit %&gt;% predict(new_data = midwestregional8, type=&quot;prob&quot;) %&gt;%
-  bind_cols(midwestregional8)</code></pre>
-<pre><code>## # A tibble: 1 x 19
-##   .pred_L .pred_W .pred_class Team    Opponent OpponentScore OpponentRollingPace
-##     &lt;dbl&gt;   &lt;dbl&gt; &lt;fct&gt;       &lt;chr&gt;   &lt;chr&gt;            &lt;dbl&gt;               &lt;dbl&gt;
-## 1   0.735   0.265 L           Houston Illinois            91                73.3
-## # ... with 12 more variables: OpponentSRS &lt;dbl&gt;,
-## #   OpponentRollingMeanOffRating &lt;dbl&gt;, OpponentRollingMeanDefRating &lt;dbl&gt;,
-## #   OpponentCumulativeWinQuality &lt;dbl&gt;, Season &lt;chr&gt;, TeamScore &lt;dbl&gt;,
-## #   RollingPace &lt;dbl&gt;, TeamSRS &lt;dbl&gt;, RollingMeanOffRating &lt;dbl&gt;,
-## #   RollingMeanDefRating &lt;dbl&gt;, CumulativeWinQuality &lt;dbl&gt;, Date &lt;date&gt;</code></pre>
-<p>Final Four Midwest Team: Illinois</p>
-<pre class="r"><code>finalfour &lt;- tibble(
-  Team=&quot;Baylor&quot;,
-  Opponent=&quot;Illinois&quot;,
-  Date = as.Date(&quot;2021-03-19&quot;)
-) %&gt;% add_row(
-  Team=&quot;Gonzaga&quot;,
-  Opponent=&quot;Michigan&quot;,
-  Date = as.Date(&quot;2021-03-19&quot;)
-)</code></pre>
-<pre class="r"><code>finalfourgames &lt;- selectedgames %&gt;% group_by(Team) %&gt;% filter(Date == max(Date), Season == &quot;2020-2021&quot;) %&gt;% select(-Date, -Opponent, -Outcome) %&gt;% right_join(finalfour)</code></pre>
-<pre><code>## Joining, by = &quot;Team&quot;</code></pre>
-<pre class="r"><code>finalfourgames &lt;- opponentgames %&gt;% group_by(Opponent) %&gt;% filter(Date == max(Date)) %&gt;% ungroup()  %&gt;% select(-Season, -Date, -Outcome) %&gt;% right_join(finalfourgames, by=c(&quot;Opponent&quot;)) %&gt;% select(Team, everything())
-
-finalfourresults &lt;- log_fit %&gt;% predict(new_data = finalfourgames) %&gt;%
-  bind_cols(finalfourgames) 
-
-log_fit %&gt;% predict(new_data = finalfourresults, type=&quot;prob&quot;) %&gt;%
-  bind_cols(finalfourresults)</code></pre>
-<pre><code>## # A tibble: 2 x 19
-##   .pred_L .pred_W .pred_class Team    Opponent OpponentScore OpponentRollingPace
-##     &lt;dbl&gt;   &lt;dbl&gt; &lt;fct&gt;       &lt;chr&gt;   &lt;chr&gt;            &lt;dbl&gt;               &lt;dbl&gt;
-## 1   0.692   0.308 L           Baylor  Illinois            91                73.3
-## 2   0.410   0.590 W           Gonzaga Michigan            67                72.8
-## # ... with 12 more variables: OpponentSRS &lt;dbl&gt;,
-## #   OpponentRollingMeanOffRating &lt;dbl&gt;, OpponentRollingMeanDefRating &lt;dbl&gt;,
-## #   OpponentCumulativeWinQuality &lt;dbl&gt;, Season &lt;chr&gt;, TeamScore &lt;dbl&gt;,
-## #   RollingPace &lt;dbl&gt;, TeamSRS &lt;dbl&gt;, RollingMeanOffRating &lt;dbl&gt;,
-## #   RollingMeanDefRating &lt;dbl&gt;, CumulativeWinQuality &lt;dbl&gt;, Date &lt;date&gt;</code></pre>
-<pre class="r"><code>championship &lt;- tibble(
-  Team=&quot;Illinois&quot;,
-  Opponent=&quot;Gonzaga&quot;,
-  Date = as.Date(&quot;2021-03-19&quot;)
-)</code></pre>
-<pre class="r"><code>championshipgames &lt;- selectedgames %&gt;% group_by(Team) %&gt;% filter(Date == max(Date), Season == &quot;2020-2021&quot;) %&gt;% select(-Date, -Opponent, -Outcome) %&gt;% right_join(championship)</code></pre>
-<pre><code>## Joining, by = &quot;Team&quot;</code></pre>
-<pre class="r"><code>championshipgames &lt;- opponentgames %&gt;% group_by(Opponent) %&gt;% filter(Date == max(Date)) %&gt;% ungroup()  %&gt;% select(-Season, -Date, -Outcome) %&gt;% right_join(championshipgames, by=c(&quot;Opponent&quot;)) %&gt;% select(Team, everything())
-
-championshipresults &lt;- log_fit %&gt;% predict(new_data = championshipgames) %&gt;%
-  bind_cols(championshipgames) 
-
-log_fit %&gt;% predict(new_data = championshipresults, type=&quot;prob&quot;) %&gt;%
-  bind_cols(championshipresults)</code></pre>
-<pre><code>## # A tibble: 1 x 19
-##   .pred_L .pred_W .pred_class Team     Opponent OpponentScore OpponentRollingPa~
-##     &lt;dbl&gt;   &lt;dbl&gt; &lt;fct&gt;       &lt;chr&gt;    &lt;chr&gt;            &lt;dbl&gt;              &lt;dbl&gt;
-## 1   0.571   0.429 L           Illinois Gonzaga             88               83.8
-## # ... with 12 more variables: OpponentSRS &lt;dbl&gt;,
-## #   OpponentRollingMeanOffRating &lt;dbl&gt;, OpponentRollingMeanDefRating &lt;dbl&gt;,
-## #   OpponentCumulativeWinQuality &lt;dbl&gt;, Season &lt;chr&gt;, TeamScore &lt;dbl&gt;,
-## #   RollingPace &lt;dbl&gt;, TeamSRS &lt;dbl&gt;, RollingMeanOffRating &lt;dbl&gt;,
-## #   RollingMeanDefRating &lt;dbl&gt;, CumulativeWinQuality &lt;dbl&gt;, Date &lt;date&gt;</code></pre>
-<p>2021 NCAA Basketball Champion: Gonzaga</p>
+<p>I’m expecting both teams to get around 75 possessions, both scoring about a point per possession (100 Offensive Rating). Gonzaga will win a close one: 78-75.</p>
 </div>
 
     </div>
@@ -1112,6 +388,9 @@ log_fit %&gt;% predict(new_data = championshipresults, type=&quot;prob&quot;) %&
 
 
     
+<script src="/js/math-code.js"></script>
+<script async src="//cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+
 
     
   </body>
