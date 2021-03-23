@@ -1,0 +1,4 @@
+This is a Brave Rewards publisher verification file.
+
+Domain: jthiele5.github.io
+Token: c1b6c0a70ef89d5ff814b1c928112f0e1d5dda544836671b68eaa7dc7ca1beb6
