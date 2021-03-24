@@ -62,7 +62,7 @@
 
   <article class="article">
     
-    <span class="article-duration">12 min read</span>
+    <span class="article-duration">13 min read</span>
     
 
     <h1 class="article-title">Predicting March Madness with Machine Learning</h1>
@@ -78,12 +78,14 @@
 
 <div id="background" class="section level2">
 <h2>Background</h2>
-<p>We all look to win that lucrative $1 million dollars for that perfect bracket, but we resort to methods of picking the color mascot, flipping a coin, or now the new favorite - letting the site randomly finish your bracket for you. Based on probability, you have a 1 in over 9 quintillion - that’s 18 zeros. With a little bit of basketball knowledge and history of the tournament, you can probably bring down those odds to 1 in 100 billion, so your dreams of that million dollars should stay dreams.</p>
-<p>Now me being a math nerd and very optimistic of my own abilities (even though 75% of college basketball I watched this year was Nebraska), I utilized a new method to create my brackets this year. I’ve attempted to create the best model R based on a few metrics to predict this year’s champion. I’ll give a little breakdown of my thinking and how I expect this year to go.</p>
+<p>We all look to win that lucrative $1 million dollars for that perfect bracket, but we resort to methods of picking the color mascot, flipping a coin, or now the new favorite - letting the site randomly finish your bracket for you. Based on probability, you have a 1 in over 9 quintillion - that’s 18 zeros. With a little bit of basketball knowledge and history of the tournament, you can probably bring down those odds to 1 in about 100 billion, so your dreams of that million dollars should stay dreams.</p>
+<p>Now me being a math nerd and very optimistic of my own abilities (even though 75% of college basketball I watched this year was Nebraska), I utilized a new method to create my brackets this year - machine learning. The model I built uses decide a simple W or L designation.</p>
 </div>
 <div id="features-of-the-model" class="section level2">
 <h2>Features of the Model</h2>
-<p>The goal of the model is to correctly predict the winner of games (the data is from 2013 through the conference championships of 2021). The higher the accuracy of the model, the better results. The issue this year is teams played fewer non-conference games, meaning it’s more difficult to truly tell how good each conference is, and therefore, how good each team is. Therefore, I included a basic Win Quality metric to hopefully compensate for that lack of intraconference play.</p>
+<p>The data is from 2015 through the conference championships of 2021, giving us plenty of data to work with. The higher the accuracy of the model, the better results. Three variables used for the prediction are each team’s respective pace, offensive rating, and defensive rating. When these three stats are known - which is only possible after the game - we could correctly predict the results and score nearly 100% of the time.</p>
+<p>The reasoning behind using rolling mean - selecting the average of the last k games - instead of cumulative mean - taking the average of all the games - is based solely on accuracy. I decided upon k=10 because the model, when applied to March Madness, was too unstable when k was less than 10, despite including the Win Quality variable. FOr example, when k was anywhere between 2 to 5, the model would predict a lot of upsets from high seeded, non-Power5 teams, which typically wouldn’t occur.</p>
+<p>Additionally, I included a final variable calculating Win Quality of the teams. limited the Win Quality variable to the last 15 games, looking to only include conference play and when most teams were settled into the season - hopefully looking to remove most COVID breaks and/or teams had developed their identity. It has been a weird year for college hoops, and the results below definitely show it!</p>
 <pre class="r"><code>games &lt;- read_csv(&quot;data/cbblogs1521.csv&quot;) %&gt;% mutate(
   Possessions = .5*(TeamFGA - TeamOffRebounds + TeamTurnovers + (.475 * TeamFTA)) + .5*(OpponentFGA - OpponentOffRebounds + OpponentTurnovers + (.475 * OpponentFTA)),
   OffensiveRating = (TeamScore/Possessions)*100, 
@@ -125,23 +127,21 @@
 ##   Team = col_character()
 ## )
 ## i Use `spec()` for the full column specifications.</code></pre>
-<p>The only other three metrics are each team’s respective pace, offensive rating, and defensive rating. When these three stats are known - which is only possible after the game, are able to correctly predict results and score nearly 100% of the time. The fun part is trying to predict those stats before the games begin, and as you can see below, that’s definitely the hard part. This model only gets about 70% of the games right. In other words, basketball is a very hard game to predict.</p>
+<p>This model only gets about 70% of the games right. In other words, basketball is a very random game with a lot of variability, so despite knowing exactly what you need to get to the final score, results are still very difficult to predict.</p>
 <pre class="r"><code>metrics(testpredict, Outcome, .pred_class)</code></pre>
 <pre><code>## # A tibble: 2 x 3
 ##   .metric  .estimator .estimate
 ##   &lt;chr&gt;    &lt;chr&gt;          &lt;dbl&gt;
 ## 1 accuracy binary         0.692
 ## 2 kap      binary         0.384</code></pre>
-<p>The reasoning behind the rolling mean is based solely on accuracy. A rolling mean did better than a cumulative mean for k number of games, where in this case, that k was 10. I decided upon 10 because the model, when applied to March Madness, was too unstable when k was less than 10, despite including the Win Quality variable. FOr example, when k was anywhere between 2 to 5, the model would predict a lot of upsets from low seeded, non-Power5 teams, which typically wouldn’t occur.</p>
-<p>Additionally, I limited the Win Quality variable to the last 15 games, looking to only include conference play and when most teams were settled into the season - hopefully looking to remove most COVID breaks and/or teams had developed their identity. It has been a weird year for college hoops, and the results below definitely show it!</p>
 <p>***Final disclaimer, the model doesn’t adjust for teams with recently diminished rosters - I’m looking at you Michigan, Villanova, and Kansas - but will slightly realize these changes through their worst performances from the last few games.</p>
 </div>
 <div id="bracket" class="section level2">
 <h2>Bracket</h2>
-<p>To save you some time, we’re going to hop right into the Elite 8 and summarize how the teams got there. For the West, we see Gonzaga stays undefeated after victories over Norfolk State, Missouri, and Virginia. Kansas defeats Eastern Washington, USC, and Iowa on it’s way to Gonzaga, unfortunately losing to the juggernaut of Gonzaga. The biggest upset by the model for this region, predicting Creighton to lose to UCSB.</p>
+<p>To save you some time, we’re going to hop right into the Elite 8 and summarize how the teams got there. For the West, we see Gonzaga stays undefeated after victories over Norfolk State, Missouri, and Virginia. Iowa defeats Grand Canyon, VCU, and USC on it’s way to Gonzaga, unfortunately losing to the juggernaut of Gonzaga. No upsets were predicted in this model.</p>
 <pre class="r"><code>west8 &lt;- tibble(
   Team=&quot;Gonzaga&quot;,
-  Opponent=&quot;Kansas&quot;,
+  Opponent=&quot;Iowa&quot;,
   Date = as.Date(&quot;2021-03-19&quot;)
 ) 
 
@@ -157,13 +157,13 @@ log_fit %&gt;% predict(new_data = westregional8, type=&quot;prob&quot;) %&gt;%
 <pre><code>## # A tibble: 1 x 19
 ##   .pred_L .pred_W .pred_class Team    Opponent OpponentScore OpponentRollingPace
 ##     &lt;dbl&gt;   &lt;dbl&gt; &lt;fct&gt;       &lt;chr&gt;   &lt;chr&gt;            &lt;dbl&gt;               &lt;dbl&gt;
-## 1   0.410   0.590 W           Gonzaga Kansas              69                75.4
+## 1   0.408   0.592 W           Gonzaga Iowa                71                85.2
 ## # ... with 12 more variables: OpponentSRS &lt;dbl&gt;,
 ## #   OpponentRollingMeanOffRating &lt;dbl&gt;, OpponentRollingMeanDefRating &lt;dbl&gt;,
 ## #   OpponentCumulativeWinQuality &lt;dbl&gt;, Season &lt;chr&gt;, TeamScore &lt;dbl&gt;,
 ## #   RollingPace &lt;dbl&gt;, TeamSRS &lt;dbl&gt;, RollingMeanOffRating &lt;dbl&gt;,
 ## #   RollingMeanDefRating &lt;dbl&gt;, CumulativeWinQuality &lt;dbl&gt;, Date &lt;date&gt;</code></pre>
-<p>We move to the East where we see the No. 1 Michigan Wolverines face and defeat the No. 2 Alabama Crimson Tide. Alabama beats Iona, Maryland, and Texas along the way but can’t quite get past the Wolverines, who beats Mount Saint Mary’s - winner of the playin game - LSU and Colorado. Maryland beating UConn is the biggest upset predicted for the East region.</p>
+<p>We move to the East where we see the No. 1 Michigan Wolverines face and defeat the No. 2 Alabama Crimson Tide. Alabama beats Iona, Maryland, and Texas along the way but can’t quite get past the Wolverines, who beats Mount Saint Mary’s - winner of the playin game - LSU and Colorado. Maryland beating UConn is the biggest upset for the East region.</p>
 <pre class="r"><code>east8 &lt;- tibble(
   Team=&quot;Michigan&quot;,
   Opponent=&quot;Alabama&quot;,
@@ -350,7 +350,24 @@ Illinois</code></pre>
 ## 13 Illinois             79              68.2        73.3                 105.
 ## 14 Illinois             79.9            69.6        73.3                 105.
 ## # ... with 1 more variable: RollingMeanDefRating &lt;dbl&gt;</code></pre>
-<p>I’m expecting both teams to get around 75 possessions, both scoring about a point per possession (100 Offensive Rating). Gonzaga will win a close one: 78-75.</p>
+<p>I’m expecting both teams to get around 75 possessions, both scoring about a point per possession (100 Offensive Rating). Gonzaga will win a close one: 80-75.</p>
+</div>
+<div id="how-it-went-first-weekend" class="section level2">
+<h2>How It Went: First Weekend</h2>
+<p>Awaiting the Sweet 16 and having no clue how to function for a week without basketball, my model did … okay. That Colgate pick definitely didn’t work out but the whole bottom half of the South has been a struggle. Compared to any other model I made, this one has done the best so far - best here still isn’t great. It’s gotten 73% of games correct which is better than I did choosing on my own; so overall, a success thus far.</p>
+<div class="figure">
+<img src="images/Top.png" width="1045" height="670" alt="" />
+<p class="caption">My West and South Prediction</p>
+</div>
+<div class="figure">
+<img src="images/Bottom.png" width="1045" height="670" alt="" />
+<p class="caption">My East and Midwest Prediction</p>
+</div>
+<p>Some close games - the model expected to be about 50/50 - that I missed:
+Oregon v. VCU (tough luck VCU) and Colorado v Florida State.</p>
+<p>Some close games - according to the model - that I got right:
+Oklahoma v. Missouri, Kansas v. USC, Creighton v. UCSB, LSU v. St Bonaventure, Maryland v. UConn, and Villanova v. Winthrop.</p>
+<p>Honestly, the model did really well predicting those supposed 50/50 games. Unfortunately, it missed the marks on Colgate, Oral Roberts, Oregon State, San Diego State, and Loyola Chicago (1 of my initial models did have these guys winning). Excited to see how this next weekend pans out!</p>
 </div>
 
     </div>
