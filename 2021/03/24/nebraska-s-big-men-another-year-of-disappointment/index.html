@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="generator" content="Hugo 0.81.0" />
+
+
+<title>Nebraska&#39;s Big Men: Another Year of Disappointment? - Josh Thiele</title>
+<meta property="og:title" content="Nebraska&#39;s Big Men: Another Year of Disappointment? - Josh Thiele">
+
+
+  <link href='http://jthiele5.github.io/favicon.ico' rel='icon' type='image/x-icon'/>
+
+
+
+  
+
+
+
+
+
+
+
+
+<link href='//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css' rel='stylesheet' type='text/css' />
+
+
+
+<link rel="stylesheet" href="/css/fonts.css" media="all">
+<link rel="stylesheet" href="/css/main.css" media="all">
+
+
+
+  </head>
+  <body>
+    <div class="wrapper">
+      <header class="header">
+        <nav class="nav">
+  <a href="/" class="nav-logo">
+    <img src="/images/logo.png"
+         width="50"
+         height="50"
+         alt="Logo">
+  </a>
+
+  <ul class="nav-links">
+    
+    <li><a href="/about/">About</a></li>
+    
+    <li><a href="http://heyday.money">Heyday</a></li>
+    
+    <li><a href="https://www.linkedin.com/in/joshthiele/">LinkedIn</a></li>
+    
+  </ul>
+</nav>
+
+      </header>
+
+
+<main class="content" role="main">
+
+  <article class="article">
+    
+    <span class="article-duration">4 min read</span>
+    
+
+    <h1 class="article-title">Nebraska&#39;s Big Men: Another Year of Disappointment?</h1>
+
+    
+    <span class="article-date">2021-03-24</span>
+    
+
+    <div class="article-content">
+      
+<script src="http://jthiele5.github.io/2021/03/24/nebraska-s-big-men-another-year-of-disappointment/index_files/header-attrs/header-attrs.js"></script>
+
+
+<div id="this-is-a-work-in-progress" class="section level2">
+<h2>This is a work in progress!</h2>
+<p>Since being born in 2000, I have been raised to bleed Husker Red. It hasn’t worked out much for either football or basketball, but one weak link for at least basketball has always been our big man. Besides Isaiah Roby - who really isn’t a 5 but has played a little for OKC at center - we’ve had some pretty bad history. Too many coaches and players later, we still haven’t even won a tournament game, but I think we have some intriguing big men in 2020-2021. Derrick Walker came onto the seen after his suspension cementing himself as the starter for this year and next; Eduardo Andre looks like a promising prospect who can grow into a solid B1G big; and Yvan Ouedraogo was lost in the dust and will be transferring before next season. We’ll bring in another big in Wilhelm Breidenbach next season, who definitely fits Hoiberg’s system has been a highly touted high school player, but I’m interested to see how our current 2 guys will grow.</p>
+<p>I’m going to use some basic _____________ in R to figure out how great these guys actually were for us this year and project these guys’ growth for the coming season(s).</p>
+<p>First thing is we’ll load in our needed libraries:</p>
+<pre class="r"><code>library(tidyverse)</code></pre>
+<pre><code>## -- Attaching packages --------------------------------------- tidyverse 1.3.0 --</code></pre>
+<pre><code>## v ggplot2 3.3.3     v purrr   0.3.4
+## v tibble  3.1.0     v dplyr   1.0.5
+## v tidyr   1.1.3     v stringr 1.4.0
+## v readr   1.4.0     v forcats 0.5.1</code></pre>
+<pre><code>## Warning: package &#39;ggplot2&#39; was built under R version 4.0.4</code></pre>
+<pre><code>## Warning: package &#39;tibble&#39; was built under R version 4.0.4</code></pre>
+<pre><code>## Warning: package &#39;tidyr&#39; was built under R version 4.0.4</code></pre>
+<pre><code>## Warning: package &#39;dplyr&#39; was built under R version 4.0.4</code></pre>
+<pre><code>## Warning: package &#39;forcats&#39; was built under R version 4.0.4</code></pre>
+<pre><code>## -- Conflicts ------------------------------------------ tidyverse_conflicts() --
+## x dplyr::filter() masks stats::filter()
+## x dplyr::lag()    masks stats::lag()</code></pre>
+<pre class="r"><code>library(cluster)</code></pre>
+<pre><code>## Warning: package &#39;cluster&#39; was built under R version 4.0.4</code></pre>
+<pre class="r"><code>set.seed(1234)</code></pre>
+<p>Loading in player data from the 2013-2021 season. This will have to be updated because we have no data for Derrick Walker yet :(</p>
+<pre class="r"><code>players &lt;- read_csv(&quot;data/cbbplayers1321.csv&quot;)</code></pre>
+<pre><code>## 
+## -- Column specification --------------------------------------------------------
+## cols(
+##   .default = col_double(),
+##   Season = col_character(),
+##   Conference = col_character(),
+##   Team = col_character(),
+##   Player = col_character(),
+##   Class = col_character(),
+##   Pos = col_character(),
+##   Height = col_character(),
+##   Hometown = col_character(),
+##   `High School` = col_character(),
+##   Summary = col_character()
+## )
+## i Use `spec()` for the full column specifications.</code></pre>
+<pre class="r"><code>#The dataset needs to be updated: From Feb 2, 2021</code></pre>
+<p>Looking at the current Husker’s roster. Unfortunately, Derrick Walker is put as a forward so we’ll classify both C and F together.</p>
+<pre class="r"><code>currentHuskers &lt;- players %&gt;% filter(Season == &quot;2020-2021&quot;, Team == &quot;Nebraska Cornhuskers&quot;)</code></pre>
+<pre class="r"><code>playersselected &lt;- players %&gt;% 
+  filter(MP&gt;0) %&gt;% filter(Pos == &quot;C&quot;) %&gt;% filter(Season == &quot;2020-2021&quot;) %&gt;%
+  select(Player, Team, Pos, MP, `FG%`, AST, TOV, PTS, TRB) %&gt;% 
+  na.omit() </code></pre>
+<pre class="r"><code>playersscaled &lt;- playersselected %&gt;% 
+  select(MP, `FG%`, AST, TOV, PTS, TRB) %&gt;% 
+  mutate_all(scale) %&gt;% 
+  na.omit()</code></pre>
+<pre class="r"><code># function to compute total within-cluster sum of square 
+wss &lt;- function(k) {
+  kmeans(playersscaled, k, nstart = 10 )$tot.withinss
+}
+
+# Compute and plot wss for k = 1 to k = 15
+k.values &lt;- 1:15
+
+# extract wss for 2-15 clusters
+wss_values &lt;- map_dbl(k.values, wss)</code></pre>
+<pre><code>## Warning: did not converge in 10 iterations</code></pre>
+<pre class="r"><code>plot(k.values, wss_values,
+       type=&quot;b&quot;, pch = 19, frame = FALSE, 
+       xlab=&quot;Number of clusters K&quot;,
+       ylab=&quot;Total within-clusters sum of squares&quot;)</code></pre>
+<p><img src="http://jthiele5.github.io/2021/03/24/nebraska-s-big-men-another-year-of-disappointment/index_files/figure-html/unnamed-chunk-7-1.png" width="672" /></p>
+<pre class="r"><code>k5 &lt;- kmeans(playersscaled, centers = 5, nstart = 25)</code></pre>
+<pre class="r"><code>playercluster &lt;- data.frame(playersselected, k5$cluster) </code></pre>
+<pre class="r"><code>ea &lt;- playercluster %&gt;% filter(Player == &quot;Eduardo Andre&quot;)
+
+ea</code></pre>
+<pre><code>##          Player                 Team Pos MP   FG. AST TOV PTS TRB k5.cluster
+## 1 Eduardo Andre Nebraska Cornhuskers   C 28 0.857   1   3  15   8          4</code></pre>
+<pre class="r"><code>big10 &lt;- c(&quot;Nebraska Cornhuskers&quot;, &quot;Iowa Hawkeyes&quot;, &quot;Minnesota Golden Gophers&quot;, &quot;Illinois Fighting Illini&quot;, &quot;Northwestern Wildcats&quot;, &quot;Wisconsin Badgers&quot;, &quot;Indiana Hoosiers&quot;, &quot;Purdue Boilermakers&quot;, &quot;Ohio State Buckeyes&quot;, &quot;Michigan Wolverines&quot;, &quot;Michigan State Spartans&quot;, &quot;Penn State Nittany Lions&quot;, &quot;Rutgers Scarlet Knights&quot;, &quot;Maryland Terrapins&quot;)
+
+playercluster %&gt;% filter(k5.cluster == 4) %&gt;% filter(Team %in% big10) %&gt;% arrange(desc(MP))</code></pre>
+<pre><code>##              Player                     Team Pos MP   FG. AST TOV PTS TRB
+## 1      Mady Sissoko  Michigan State Spartans   C 48 0.500   0   1   9  19
+## 2       Sam Freeman Minnesota Golden Gophers   C 32 0.600   0   0  10   8
+## 3     Eduardo Andre     Nebraska Cornhuskers   C 28 0.857   1   3  15   8
+## 4 Matthew Nicholson    Northwestern Wildcats   C 17 0.571   1   2   8   5
+## 5   Jermaine Hamlin Illinois Fighting Illini   C 10 0.667   0   1   6   3
+##   k5.cluster
+## 1          4
+## 2          4
+## 3          4
+## 4          4
+## 5          4</code></pre>
+</div>
+
+    </div>
+  </article>
+
+  
+
+
+</main>
+
+      <footer class="footer">
+        <ul class="footer-links">
+          <li>
+            <a href="/index.xml" type="application/rss+xml" target="_blank">RSS feed</a>
+          </li>
+          <li>
+            <a href="https://gohugo.io/" class="footer-links-kudos">Made with <img src="/images/hugo-logo.png" alt="Img link to Hugo website" width="22" height="22"></a>
+          </li>
+        </ul>
+      </footer>
+
+    </div>
+    
+
+
+
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js"></script>
+
+
+
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/languages/r.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/languages/yaml.min.js"></script>
+<script>hljs.configure({languages: []}); hljs.initHighlightingOnLoad();</script>
+
+
+
+    
+<script src="/js/math-code.js"></script>
+<script async src="//cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+
+
+    
+  </body>
+</html>
+
