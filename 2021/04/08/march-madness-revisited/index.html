@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="generator" content="Hugo 0.81.0" />
+
+
+<title>March Madness: Revisited - Josh Thiele</title>
+<meta property="og:title" content="March Madness: Revisited - Josh Thiele">
+
+
+  <link href='http://jthiele5.github.io/favicon.ico' rel='icon' type='image/x-icon'/>
+
+
+
+  
+
+
+
+
+
+
+
+<link rel="stylesheet" href="/css/fonts.css" media="all">
+<link rel="stylesheet" href="/css/main.css" media="all">
+
+
+
+  </head>
+  <body>
+    <div class="wrapper">
+      <header class="header">
+        <nav class="nav">
+  <a href="/" class="nav-logo">
+    <img src="/images/logo.png"
+         width="50"
+         height="50"
+         alt="Logo">
+  </a>
+
+  <ul class="nav-links">
+    
+    <li><a href="/about/">About</a></li>
+    
+    <li><a href="http://heyday.money">Heyday</a></li>
+    
+    <li><a href="https://www.linkedin.com/in/joshthiele/">LinkedIn</a></li>
+    
+  </ul>
+</nav>
+
+      </header>
+
+
+<main class="content" role="main">
+
+  <article class="article">
+    
+    <span class="article-duration">3 min read</span>
+    
+
+    <h1 class="article-title">March Madness: Revisited</h1>
+
+    
+    <span class="article-date">2021-04-08</span>
+    
+
+    <div class="article-content">
+      
+<script src="http://jthiele5.github.io/2021/04/08/march-madness-revisited/index_files/header-attrs/header-attrs.js"></script>
+
+
+<p>As March Madness came to a close this year, my model did … solid. The B1G disappointed and that definitely hurt, but looking at the class standings, I finished middle of the pack.</p>
+<p><img src="images/ClassRankings.png" /></p>
+<p>I was distinctively at the bottom of anyone who choose one of the two finalists, but I didn’t do super well outside of banking on Gonzaga. Now, compared to any other model I made, this one was my second best - I had one where I picked Baylor v. Gonzaga in the final. The model got about 72% of the games correct which is better than I would have done choosing solely on my own; truly, this model building gave me way more knowledge about this college basketball season than I had beforehand.</p>
+<p><img src="images/Top.png" width="1045" height="670" /></p>
+<p><img src="images/Bottom.png" width="1045" height="670" /></p>
+<p>Some close games in the first round - the model expected to be about 50/50 - that I missed:
+Oregon vs. VCU (tough luck VCU) and Colorado vs. Florida State.</p>
+<p>Some close games in the first round - according to the model - that I predicted:
+Oklahoma vs. Missouri, Kansas vs. USC, Creighton vs. UCSB, Maryland vs. UConn, and Villanova vs. Winthrop.</p>
+<p>Honestly, the model did really well predicting those supposed 50/50 games. Unfortunately, it missed the marks on Colgate, Oral Roberts, Oregon State, San Diego State, and Loyola Chicago. There were bigger issues with my model than just missing the close games.</p>
+<p>Retrospectively, it would’ve been nice to know the B1G was going to be stuck in Indianapolis that whole week before, and I’m personally using that as the reason why the conference performed so poorly. I can make all these complaints about things out of my control and changes that can not be reflected in the data; but I definitely think there is some work to do before next year’s contest. The possession metrics seemed like a great idea - they are great for predicting results after you have the data - but they are so difficult to predict with on their own. There was too big of dropoff between training and testing results, and therefore, I’m going to consider using variables that aggregate into those possession metrics next year (shooting statistics, turnovers, offense rebounds, etc.).</p>
+<p>Additionally, I’m looking to maybe change the rolling window. If I’m going to look for more stabilized, long-term team performances, I might as well make it all of conference play or all of the season. If I’m going to look for a more short-term window, I might as well try to highly value teams that were playing well in the final few games of the season - Baylor I think is a good example. The final feature engineering change will be a better Win Quality measure - RPI has historically done well predicting the tournament. With more intraconference play next season, I feel my model should perform better, but there’s definitely room on my end to improve as well.</p>
+<p>Overall, I feel this project was quite successful. This got me more excited about the tournament, built a better bracket, and taught me more about the college basketball teams this year. I think with a little human tinkering after running my model next year, I might win a tournament next year - as long as I don’t take the Huskers too far in it!</p>
+
+    </div>
+  </article>
+
+  
+
+
+</main>
+
+      <footer class="footer">
+        <ul class="footer-links">
+          <li>
+            <a href="/index.xml" type="application/rss+xml" target="_blank">RSS feed</a>
+          </li>
+          <li>
+            <a href="https://gohugo.io/" class="footer-links-kudos">Made with <img src="/images/hugo-logo.png" alt="Img link to Hugo website" width="22" height="22"></a>
+          </li>
+        </ul>
+      </footer>
+
+    </div>
+    
+
+    
+
+    
+  </body>
+</html>
+
